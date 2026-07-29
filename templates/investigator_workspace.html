@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Assisted Vendor Investigation Workspace</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+            --warning-glow: #ffb01a;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.1) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 40px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 8px;
+            margin-right: 8px;
+            font-weight: 600;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: rgba(0, 242, 254, 0.15) !important;
+            color: var(--cyan-glow) !important;
+            border: 1px solid var(--cyan-glow) !important;
+        }
+
+        .ai-sandbox-panel {
+            border: 1.5px dashed var(--purple-glow);
+            background: rgba(142, 45, 226, 0.04);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .ai-banner {
+            font-size: 0.72rem;
+            color: #d1b3ff;
+            background: rgba(142, 45, 226, 0.2);
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .priority-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .priority-badge.critical { background: var(--danger-glow); color: white; }
+        .priority-badge.high { background: var(--warning-glow); color: black; }
+        .priority-badge.medium { background: var(--info-glow); color: white; }
+        .priority-badge.low { background: var(--success-glow); color: white; }
+
+        .timeline-audit-item {
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            padding-left: 15px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .timeline-audit-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cyan-glow);
+            position: absolute;
+            left: -5px;
+            top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">💼 AI INVESTIGATION WORKSPACE</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">AI-Assisted Investigation Workspace</h1>
+                <p class="text-secondary mb-0">Consolidate data lineage, graph fraud indicators, and add sandboxed advisor logs.</p>
+            </div>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            
+            <!-- Left Side: Select & workflow parameters -->
+            <div class="col-lg-8 col-12 d-flex flex-column">
+                <div class="glass-card p-4 mb-4">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">SELECT SUSPICIOUS VENDOR:</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="vendor-selector" onchange="loadCaseDetails()">
+                                <option value="">-- Choose target profile --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 align-items-end mt-4">
+                            <button class="btn btn-danger w-50 fw-bold" id="btn-open-case" onclick="triggerOpenCase()" disabled><i class="bi bi-folder-plus"></i> Open Case</button>
+                            <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-agent-diagnostic" onclick="triggerAgentDiagnostic()" disabled><i class="bi bi-cpu"></i> Agent Diagnostic</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column" id="case-workspace-details" style="display: none !important;">
+                    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                        <div>
+                            <h4 class="text-white fw-bold mb-1" id="case-title-label">CASE-XXXX-XXXX</h4>
+                            <span class="text-secondary small">Vendor Reference: <strong class="text-white" id="case-vendor-ref">Vendor Name</strong></span>
+                        </div>
+                        <div>
+                            <span class="priority-badge" id="case-priority-badge">Medium Priority</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabs navigator -->
+                    <ul class="nav nav-tabs border-0 mb-4" id="investigationTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow-pane" type="button" role="tab">Workflow Status</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="facts-tab" data-bs-toggle="tab" data-bs-target="#facts-pane" type="button" role="tab">Facts & Registry</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="risk-tab" data-bs-toggle="tab" data-bs-target="#risk-pane" type="button" role="tab">Fraud & Alerts</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="lineage-tab" data-bs-toggle="tab" data-bs-target="#lineage-pane" type="button" role="tab">Audit & Lineage</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content flex-grow-1" id="investigationTabContent">
+                        
+                        <!-- TAB 1: WORKFLOW -->
+                        <div class="tab-pane fade show active" id="workflow-pane" role="tabpanel">
+                            <div class="row g-3 mb-4">
+                                <div class="col-sm-4">
+                                    <label class="form-label text-secondary small">ASSIGNED INVESTIGATOR:</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-white" id="case-assignee" value="auditor@system.local">
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label text-secondary small">PRIORITY LEVEL:</label>
+                                    <select class="form-select bg-dark border-secondary text-white" id="case-priority">
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="High">High</option>
+                                        <option value="Critical">Critical</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label text-secondary small">CASE STATUS:</label>
+                                    <select class="form-select bg-dark border-secondary text-white" id="case-status">
+                                        <option value="Open">Open</option>
+                                        <option value="Under Investigation">Under Investigation</option>
+                                        <option value="Resolved">Resolved</option>
+                                        <option value="Dismissed">Dismissed</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-info fw-bold mb-4" onclick="saveWorkflowState()"><i class="bi bi-save"></i> Save Workflow Status</button>
+
+                            <hr style="border-color: rgba(255,255,255,0.08)">
+
+                            <h6 class="text-white fw-bold mb-3"><i class="bi bi-journal-text"></i> Notes & Evidence Ledger</h6>
+                            <div id="notes-list" class="mb-3 overflow-y-auto" style="max-height: 200px;">
+                                <!-- Loaded dynamically -->
+                            </div>
+                            
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-dark border-secondary text-white" id="new-note-text" placeholder="Add custom evidence details or notes...">
+                                <button class="btn btn-primary" onclick="submitCaseNote()"><i class="bi bi-plus"></i> Add Note</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: FACTS -->
+                        <div class="tab-pane fade" id="facts-pane" role="tabpanel">
+                            <div class="row g-3" id="facts-summary-box">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: FRAUD -->
+                        <div class="tab-pane fade" id="risk-pane" role="tabpanel">
+                            <div id="fraud-summary-box">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: AUDIT -->
+                        <div class="tab-pane fade" id="lineage-pane" role="tabpanel">
+                            <div id="audit-summary-box">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: AI Assistant sandboxed advisors -->
+            <div class="col-lg-4 col-12 d-flex flex-column">
+                <div class="ai-sandbox-panel flex-grow-1 d-flex flex-column">
+                    <span class="ai-banner"><i class="bi bi-cpu"></i> AI-Generated Investigation Advisors</span>
+                    
+                    <div class="alert alert-warning border-warning border-opacity-30 bg-warning bg-opacity-10 small mb-3">
+                        <i class="bi bi-exclamation-triangle"></i> AI warnings represent helper recommendations only. Manual resolution and human verification are required.
+                    </div>
+
+                    <div class="flex-grow-1 overflow-y-auto" id="ai-panel-content">
+                        <p class="text-secondary small">Please open a case file to generate AI analysis recommendations.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripting workspace logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/v2/vendors/search?limit=100', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading vendors list:", err);
+            }
+        }
+
+        let activeCase = null;
+
+        async function loadCaseDetails() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            const btnOpen = document.getElementById('btn-open-case');
+            const btnAgent = document.getElementById('btn-agent-diagnostic');
+            const panel = document.getElementById('case-workspace-details');
+
+            if (!vendorId) {
+                btnOpen.disabled = true;
+                btnAgent.disabled = true;
+                panel.setAttribute("style", "display: none !important;");
+                return;
+            }
+
+            btnOpen.disabled = false;
+            btnAgent.disabled = false;
+
+            try {
+                // Find if an active case exists for this vendor
+                const response = await fetch(`/api/v2/investigations?status=Open`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const match = data.cases.find(c => c.vendor_id == vendorId);
+                    if (match) {
+                        activeCase = match;
+                        renderCaseWorkspace();
+                    } else {
+                        // Display blank panel or open case reminder
+                        activeCase = null;
+                        panel.setAttribute("style", "display: none !important;");
+                    }
+                }
+            } catch (err) {
+                console.error("Error retrieving case logs:", err);
+            }
+        }
+
+        async function triggerAgentDiagnostic() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            if (!vendorId) return;
+
+            const box = document.getElementById('ai-panel-content');
+            box.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p class="text-secondary small mt-2">Invoking Multi-Agent diagnostic pipeline...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/v2/agents/diagnostic?vendor_id=${vendorId}`, {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'X-Role': 'Admin'
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Render report markdown content
+                    let reportLines = data.report.split('\n');
+                    let html = "";
+                    reportLines.forEach(line => {
+                        if (line.startsWith('# ')) {
+                            html += `<h5 class="text-white fw-bold mt-3 mb-2">${line.replace('# ', '')}</h5>`;
+                        } else if (line.startsWith('## ')) {
+                            html += `<h6 class="text-info fw-bold mt-3 mb-2">${line.replace('## ', '')}</h6>`;
+                        } else if (line.startsWith('**')) {
+                            html += `<p class="mb-2 text-white small">${line}</p>`;
+                        } else if (line.startsWith('- ')) {
+                            html += `<p class="mb-1 text-secondary small" style="margin-left: 10px;"><i class="bi bi-circle-fill" style="font-size: 0.4rem; color: #8e2de2; margin-right: 6px;"></i>${line.substring(2)}</p>`;
+                        } else if (line.trim()) {
+                            html += `<p class="text-secondary small mb-2">${line}</p>`;
+                        }
+                    });
+                    
+                    box.innerHTML = `
+                        <div class="p-3 bg-dark rounded-3 border border-purple border-opacity-30 mb-3">
+                            <span class="badge bg-danger mb-2">Diagnostic Level: ${data.risk_level}</span>
+                            ${html}
+                        </div>
+                    `;
+                } else {
+                    box.innerHTML = `<p class="text-danger small">Diagnostic failed: ${data.message}</p>`;
+                }
+            } catch (err) {
+                console.error("Error running agent diagnostic:", err);
+                box.innerHTML = `<p class="text-danger small">Network/Server execution error occurred.</p>`;
+            }
+        }
+
+        async function triggerOpenCase() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            if (!vendorId) return;
+
+            try {
+                const response = await fetch('/api/v2/investigations/open', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ vendor_id: vendorId, priority: 'Medium' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    activeCase = data.case;
+                    renderCaseWorkspace();
+                } else {
+                    alert("Failed to open case: " + data.message);
+                }
+            } catch (err) {
+                console.error("Error opening investigation case:", err);
+            }
+        }
+
+        function renderCaseWorkspace() {
+            const panel = document.getElementById('case-workspace-details');
+            panel.setAttribute("style", "display: flex !important;");
+
+            document.getElementById('case-title-label').innerText = activeCase.case_number;
+            document.getElementById('case-vendor-ref').innerText = activeCase.vendor_name;
+
+            // Priority badge
+            const badge = document.getElementById('case-priority-badge');
+            badge.innerText = `${activeCase.priority} Priority`;
+            badge.className = `priority-badge ${activeCase.priority.toLowerCase()}`;
+
+            // Set inputs
+            document.getElementById('case-assignee').value = activeCase.assigned_to || '';
+            document.getElementById('case-priority').value = activeCase.priority;
+            document.getElementById('case-status').value = activeCase.status;
+
+            // Render components notes
+            renderNotes();
+            renderAIAdvisor();
+
+            // Load static components facts
+            loadFactsTab();
+            loadFraudTab();
+            loadAuditTab();
+        }
+
+        function renderNotes() {
+            const list = document.getElementById('notes-list');
+            list.innerHTML = "";
+
+            if (!activeCase.evidence_notes || activeCase.evidence_notes.length === 0) {
+                list.innerHTML = `<p class="text-secondary small">No investigator notes recorded.</p>`;
+                return;
+            }
+
+            activeCase.evidence_notes.forEach(note => {
+                list.innerHTML += `
+                    <div class="p-2 mb-2 bg-dark rounded-3 border border-secondary border-opacity-10 small">
+                        <strong class="text-info">${note.author}</strong> <span class="text-secondary" style="font-size: 0.7rem;">(${new Date(note.timestamp).toLocaleString()}):</span>
+                        <p class="mb-0 text-white mt-1">${note.text}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function renderAIAdvisor() {
+            const box = document.getElementById('ai-panel-content');
+            if (!activeCase) return;
+
+            let stepsHtml = "";
+            activeCase.ai_suggestions.forEach(step => {
+                stepsHtml += `<li class="py-1"><i class="bi bi-arrow-right-short text-purple"></i> ${step}</li>`;
+            });
+
+            box.innerHTML = `
+                <div class="mb-3">
+                    <h6 class="text-white fw-bold mb-2">EVIDENCE SUMMARY</h6>
+                    <pre class="bg-dark border border-secondary border-opacity-20 text-secondary p-2 rounded-3 small" style="white-space: pre-wrap;">${activeCase.ai_summary}</pre>
+                </div>
+
+                <div>
+                    <h6 class="text-white fw-bold mb-2">SUGGESTED NEXT AUDIT STEPS</h6>
+                    <ul class="list-unstyled mb-0 small text-secondary">
+                        ${stepsHtml}
+                    </ul>
+                </div>
+            `;
+        }
+
+        async function saveWorkflowState() {
+            if (!activeCase) return;
+
+            try {
+                const response = await fetch(`/api/v2/investigations/${activeCase.id}/workflow`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: document.getElementById('case-status').value,
+                        priority: document.getElementById('case-priority').value,
+                        assigned_to: document.getElementById('case-assignee').value
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    activeCase = data.case;
+                    renderCaseWorkspace();
+                    alert("Case workflow updated!");
+                }
+            } catch (err) {
+                console.error("Error updating workflow status:", err);
+            }
+        }
+
+        async function submitCaseNote() {
+            const text = document.getElementById('new-note-text').value;
+            if (!text || !activeCase) return;
+
+            try {
+                const response = await fetch(`/api/v2/investigations/${activeCase.id}/note`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ note_text: text })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    activeCase = data.case;
+                    renderNotes();
+                    document.getElementById('new-note-text').value = "";
+                }
+            } catch (err) {
+                console.error("Error submitting case note:", err);
+            }
+        }
+
+        async function loadFactsTab() {
+            const container = document.getElementById('facts-summary-box');
+            try {
+                const response = await fetch(`/api/v2/vendors/${activeCase.vendor_id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const v = data.vendor;
+                    container.innerHTML = `
+                        <div class="col-md-6">
+                            <span class="text-secondary small">Vendor Name:</span> <strong class="text-white d-block">${v.vendor_name}</strong>
+                            <span class="text-secondary small mt-2 d-block">Category:</span> <strong class="text-white d-block">${v.category}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary small">Trust Score:</span> <strong class="text-cyan d-block">${v.trust_score.toFixed(1)}</strong>
+                            <span class="text-secondary small mt-2 d-block">Status:</span> <strong class="text-white d-block">${v.status}</strong>
+                        </div>
+                    `;
+                }
+            } catch (err) {}
+        }
+
+        async function loadFraudTab() {
+            const container = document.getElementById('fraud-summary-box');
+            try {
+                const response = await fetch(`/api/v2/vendors/${activeCase.vendor_id}/fraud/alerts`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    let listHtml = "";
+                    data.alerts.forEach(alert => {
+                        listHtml += `<li class="py-1 text-danger"><i class="bi bi-shield-x me-2"></i>${alert.fraud_pattern}: ${alert.evidence}</li>`;
+                    });
+                    container.innerHTML = `
+                        <ul class="list-unstyled mb-0 small">
+                            ${listHtml || '<li class="text-secondary">No active fraud check alerts records.</li>'}
+                        </ul>
+                    `;
+                }
+            } catch (err) {}
+        }
+
+        async function loadAuditTab() {
+            const container = document.getElementById('audit-summary-box');
+            try {
+                const response = await fetch(`/api/v2/audit-logs?vendor_id=${activeCase.vendor_id}`, {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'X-Role': 'Admin'
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    let itemsHtml = "";
+                    data.logs.forEach(log => {
+                        itemsHtml += `
+                            <div class="timeline-audit-item">
+                                <div class="timeline-audit-dot"></div>
+                                <span class="text-white small d-block">${log.action_type} inside ${log.module_name} by ${log.performed_by}</span>
+                                <span class="text-secondary small" style="font-size: 0.72rem;">${new Date(log.created_at).toLocaleString()}</span>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = `<div class="mt-2">${itemsHtml || '<p class="text-secondary small">No audits logs recorded.</p>'}</div>`;
+                }
+            } catch (err) {}
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', () => {
+            loadVendors();
+        });
+    </script>
+</body>
+</html>

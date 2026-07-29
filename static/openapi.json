@@ -1,0 +1,206 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vendor Data Quality & Trust Issues Platform API",
+    "description": "Production-grade RESTful API documentation for Vendor Risk Assessment, Fraud Detection, Compliance Auditing, AI Copilot, and Real-Time Telemetry.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Enterprise Security & API Team",
+      "email": "api-security@vendor-trust.local"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "https://localhost",
+      "description": "Production Nginx Reverse Proxy"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token obtained from `/api/v2/auth/login`"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "Unauthorized access or invalid token." },
+          "code": { "type": "integer", "example": 401 }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "example": "admin@vendor.com" },
+          "password": { "type": "string", "example": "AdminPass123!" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "example": 1 },
+              "email": { "type": "string", "example": "admin@vendor.com" },
+              "role": { "type": "string", "example": "Admin" }
+            }
+          }
+        }
+      },
+      "HealthStatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "HEALTHY" },
+          "timestamp": { "type": "string", "example": "2026-07-29T23:22:45Z" },
+          "environment": { "type": "string", "example": "production" },
+          "uptime_seconds": { "type": "number", "example": 142.69 },
+          "components": {
+            "type": "object",
+            "properties": {
+              "application": { "type": "object" },
+              "database": { "type": "object" },
+              "cache": { "type": "object" },
+              "background_jobs": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v2/auth/login": {
+      "post": {
+        "summary": "Authenticate User & Issue JWT Token",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/health": {
+      "get": {
+        "summary": "Full System Health & Deployment Monitoring Probe",
+        "tags": ["Health & Telemetry"],
+        "responses": {
+          "200": {
+            "description": "All system components healthy",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthStatusResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more components degraded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/health/liveness": {
+      "get": {
+        "summary": "Container Liveness Probe",
+        "tags": ["Health & Telemetry"],
+        "responses": {
+          "200": {
+            "description": "Container process running"
+          }
+        }
+      }
+    },
+    "/api/v2/health/readiness": {
+      "get": {
+        "summary": "Deployment Readiness Probe",
+        "tags": ["Health & Telemetry"],
+        "responses": {
+          "200": {
+            "description": "Database and Cache connected"
+          },
+          "503": {
+            "description": "Services not ready"
+          }
+        }
+      }
+    },
+    "/api/v2/vendors": {
+      "get": {
+        "summary": "Retrieve Paginated Vendor Profiles",
+        "tags": ["Vendors"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Vendors retrieved successfully" },
+          "401": { "description": "Unauthorized access" }
+        }
+      }
+    },
+    "/api/v2/copilot/query": {
+      "post": {
+        "summary": "Submit Query to Grounded RAG AI Copilot",
+        "tags": ["AI Copilot"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string", "example": "Which vendors have expiring GSTIN certificates?" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "AI answer with citations returned" },
+          "401": { "description": "Unauthorized access" }
+        }
+      }
+    }
+  }
+}

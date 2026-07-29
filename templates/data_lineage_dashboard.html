@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Data Lineage Console</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .field-item {
+            padding: 16px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .field-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateX(4px);
+        }
+        .field-item.active {
+            background: rgba(0, 242, 254, 0.08);
+            border-left-color: var(--cyan-glow);
+        }
+
+        /* Lineage Pipeline Stepper */
+        .lineage-pipeline-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .lineage-step {
+            flex: 1;
+            min-width: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+        }
+        .lineage-step::after {
+            content: "➔";
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+        .lineage-step:last-child::after {
+            display: none;
+        }
+
+        .step-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .history-box {
+            position: relative;
+            padding-left: 28px;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 24px;
+        }
+        .history-dot {
+            position: absolute;
+            left: -7px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--cyan-glow);
+            box-shadow: 0 0 8px var(--cyan-glow);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🧬 DATA LINEAGE TRACER</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Enterprise Data Lineage</h1>
+                <p class="text-secondary mb-0">Trace original data sources, OCR Extractions, human overrides, and validation pipelines.</p>
+            </div>
+            
+            <!-- Vendor Selector -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-secondary small fw-bold text-nowrap">SELECT TARGET PROFILE:</span>
+                <select class="form-select bg-dark border-secondary text-white" id="vendor-selector" onchange="loadLineageData()" style="min-width: 250px;">
+                    <!-- Will be populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            
+            <!-- Left Column: Tracked Fields list -->
+            <div class="col-lg-4 col-12">
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-filter"></i> Tracked Fields</h5>
+                    <p class="text-secondary small mb-4">Select any important master field below to visually trace its ingestion, validation, and historical overrides.</p>
+                    
+                    <div class="d-flex flex-column gap-2" id="fields-list-container">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Visual Pipeline & Changelogs -->
+            <div class="col-lg-8 col-12">
+                
+                <!-- Visual Ingestion Pipeline Map -->
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-diagram-3"></i> Visual Data Lineage Pipeline</h5>
+                    
+                    <div class="lineage-pipeline-container">
+                        
+                        <div class="lineage-step">
+                            <span class="step-icon">📦</span>
+                            <strong class="text-white small d-block mb-1">Source</strong>
+                            <span class="text-secondary small d-block" id="pipe-source">--</span>
+                        </div>
+
+                        <div class="lineage-step">
+                            <span class="step-icon">📥</span>
+                            <strong class="text-white small d-block mb-1">Ingestion</strong>
+                            <span class="text-secondary small d-block" id="pipe-ingest">--</span>
+                        </div>
+
+                        <div class="lineage-step">
+                            <span class="step-icon">🛡️</span>
+                            <strong class="text-white small d-block mb-1">Validation</strong>
+                            <span class="text-secondary small d-block" id="pipe-validate">--</span>
+                        </div>
+
+                        <div class="lineage-step">
+                            <span class="step-icon">🎛️</span>
+                            <strong class="text-white small d-block mb-1">Decision</strong>
+                            <span class="text-secondary small d-block" id="pipe-decision">--</span>
+                        </div>
+
+                        <div class="lineage-step" style="border-color: var(--cyan-glow);">
+                            <span class="step-icon">💾</span>
+                            <strong class="text-cyan small d-block mb-1">Final Record</strong>
+                            <span class="text-cyan small d-block text-truncate" id="pipe-record" style="max-width: 140px;">--</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Field Changelog timeline history -->
+                <div class="glass-card p-4" id="changelog-panel">
+                    <h5 class="text-white mb-3"><i class="bi bi-clock-history"></i> Field Evolution History</h5>
+                    <div id="changelog-container">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripting workspace lineage logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        let lineagePayload = {};
+        let activeField = 'phone';
+
+        async function populateVendorList() {
+            try {
+                const response = await fetch('/api/v2/vendors/search?limit=1000', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    selector.innerHTML = "";
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name} (${v.category})</option>`;
+                    });
+                    if (data.results.length > 0) {
+                        loadLineageData();
+                    }
+                }
+            } catch (err) {
+                console.error("Error populating vendors list:", err);
+            }
+        }
+
+        async function loadLineageData() {
+            const vid = document.getElementById('vendor-selector').value;
+            
+            try {
+                const response = await fetch(`/api/v2/analytics/data-lineage?vendor_id=${vid}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    lineagePayload = data.lineages;
+                    renderFieldsList();
+                    renderLineageWorkspace();
+                }
+            } catch (err) {
+                console.error("Error loading data lineage logs:", err);
+            }
+        }
+
+        function renderFieldsList() {
+            const container = document.getElementById('fields-list-container');
+            container.innerHTML = "";
+
+            const displayNames = {
+                'phone': 'Phone number Contact',
+                'email': 'Email Address',
+                'address': 'Corporate Address',
+                'gst_number': 'GST Tax ID',
+                'pan_number': 'PAN Legal ID',
+                'bank_account': 'Payout Bank Account'
+            };
+
+            Object.keys(lineagePayload).forEach(f => {
+                const activeCls = f === activeField ? 'active' : '';
+                container.innerHTML += `
+                    <div class="glass-card field-item ${activeCls}" onclick="selectField('${f}')">
+                        <strong class="text-white small">${displayNames[f] || f}</strong>
+                        <div class="text-secondary small text-truncate mt-1">${lineagePayload[f].current_value || 'Empty'}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectField(f) {
+            activeField = f;
+            renderFieldsList();
+            renderLineageWorkspace();
+        }
+
+        function renderLineageWorkspace() {
+            const payload = lineagePayload[activeField];
+            if (!payload) return;
+
+            // Resolve latest state for visual pipeline
+            let source = payload.baseline.original_source;
+            let ingestion = payload.baseline.import_source;
+            let validation = payload.baseline.validation_result;
+            let decision = payload.baseline.ai_suggested ? "AI Suggestion" : "System Seeder";
+
+            if (payload.history.length > 0) {
+                const latest = payload.history[payload.history.length - 1];
+                source = latest.original_source;
+                ingestion = latest.import_source;
+                validation = latest.validation_result;
+                decision = latest.ai_suggested ? "AI Suggested" : (latest.who_changed + " Override");
+            }
+
+            document.getElementById('pipe-source').innerText = source;
+            document.getElementById('pipe-ingest').innerText = ingestion;
+            document.getElementById('pipe-validate').innerText = validation;
+            document.getElementById('pipe-decision').innerText = decision;
+            document.getElementById('pipe-record').innerText = payload.current_value || 'Empty';
+            document.getElementById('pipe-record').title = payload.current_value || 'Empty';
+
+            // Render evolutionary history timeline list
+            const timeline = document.getElementById('changelog-container');
+            timeline.innerHTML = "";
+
+            // 1. Initial baseline step
+            const base = payload.baseline;
+            let baselineHtml = `
+                <div class="history-box">
+                    <div class="history-dot" style="background: var(--info-glow); box-shadow: 0 0 8px var(--info-glow);"></div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="text-white">Profile Ingestion & Initialization</strong>
+                        <span class="text-secondary small">${new Date(base.when_changed).toLocaleString()}</span>
+                    </div>
+                    <div class="text-secondary small">
+                        <strong>Value:</strong> <code class="text-white">${payload.baseline.current_value || '-'}</code><br/>
+                        <strong>Who:</strong> ${base.who_changed} | <strong>Reason:</strong> ${base.why_changed}<br/>
+                        <strong>Audit Indicators:</strong> Human Approved: <span class="badge bg-success">Yes</span> | AI Proposed: <span class="badge bg-secondary">No</span>
+                    </div>
+                </div>
+            `;
+            timeline.innerHTML += baselineHtml;
+
+            // 2. Historical changes list
+            if (payload.history.length > 0) {
+                payload.history.forEach(h => {
+                    timeline.innerHTML += `
+                        <div class="history-box">
+                            <div class="history-dot"></div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-white">Manual / Ingestion Correction Override</strong>
+                                <span class="text-secondary small">${new Date(h.when_changed).toLocaleString()}</span>
+                            </div>
+                            <div class="text-secondary small">
+                                <strong>Previous Value:</strong> <code class="text-secondary">${h.previous_value || '-'}</code> &rarr; <strong>New Value:</strong> <code class="text-white">${h.current_value || '-'}</code><br/>
+                                <strong>Who:</strong> ${h.who_changed} | <strong>Reason:</strong> ${h.why_changed}<br/>
+                                <strong>Audit Indicators:</strong> Human Approved: <span class="badge bg-success">${h.human_approved ? 'Yes' : 'No'}</span> | AI Proposed: <span class="badge bg-secondary">${h.ai_suggested ? 'Yes' : 'No'}</span> | validation: <span class="badge bg-info">${h.validation_result}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                timeline.innerHTML += `<div class="text-secondary text-center small py-3">No further change overrides recorded.</div>`;
+            }
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', populateVendorList);
+    </script>
+</body>
+</html>

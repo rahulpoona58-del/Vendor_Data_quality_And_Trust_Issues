@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligence Command Center</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Cytoscape.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #070a13;
+            --card-bg: rgba(18, 26, 47, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --warning-glow: #ffb01a;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(0, 242, 254, 0.08) 0px, transparent 40%),
+                radial-gradient(at 90% 90%, rgba(142, 45, 226, 0.08) 0px, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Projector Mode adjustments */
+        body.projector-mode {
+            --bg-dark: #000000;
+            --card-bg: #0b0f19;
+            --card-border: rgba(255, 255, 255, 0.2);
+            --text-main: #ffffff;
+            --text-secondary: #cccccc;
+            font-size: 1.1rem;
+        }
+
+        body.projector-mode .kpi-val {
+            font-size: 3rem !important;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 242, 254, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 242, 254, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #8e2de2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 242, 254, 0.2);
+        }
+
+        .kpi-card {
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-val {
+            font-size: 2.4rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-top: 8px;
+        }
+
+        .glowing-bar {
+            height: 4px;
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(90deg, var(--cyan-glow), var(--purple-glow));
+        }
+
+        .ticker-event {
+            border-left: 3px solid var(--purple-glow);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 12px;
+            transition: background 0.2s;
+        }
+
+        .ticker-event:hover {
+            background: rgba(0, 242, 254, 0.04);
+        }
+
+        #cy-container {
+            width: 100%;
+            height: 300px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Header -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🛡️ INTELLIGENCE COMMAND CENTER</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-outline-info" onclick="toggleProjectorMode()"><i class="bi bi-projector"></i> Projector Mode</button>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Main Registry</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column mb-4">
+        <!-- Control Filters toolbar -->
+        <div class="glass-card p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="input-group" style="width: 300px;">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control bg-dark border-secondary text-white" id="global-search" placeholder="Search target vendors profile..." onkeyup="filterVendors()">
+                </div>
+                <select class="form-select bg-dark border-secondary text-white" id="risk-filter" style="width: 180px;" onchange="filterVendors()">
+                    <option value="All">All Risk Ratings</option>
+                    <option value="Critical">Critical Anomalies</option>
+                    <option value="High">High Risk Level</option>
+                </select>
+            </div>
+            <div>
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="sync-status">🟢 System Synchronized</span>
+            </div>
+        </div>
+
+        <!-- Key metrics grid -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card kpi-card">
+                    <span class="text-secondary small fw-bold">TOTAL REGISTERED VENDORS</span>
+                    <div class="kpi-val text-white" id="kpi-total-vendors">0</div>
+                    <div class="glowing-bar"></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card kpi-card">
+                    <span class="text-secondary small fw-bold">AVERAGE TRUST RATING</span>
+                    <div class="kpi-val text-cyan" id="kpi-avg-trust">0.0</div>
+                    <div class="glowing-bar"></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card kpi-card">
+                    <span class="text-secondary small fw-bold">COMPLIANCE INDEX</span>
+                    <div class="kpi-val text-success" id="kpi-avg-compliance">0%</div>
+                    <div class="glowing-bar"></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card kpi-card">
+                    <span class="text-secondary small fw-bold">CRITICAL RISK ALERTS</span>
+                    <div class="kpi-val text-danger" id="kpi-risk-alerts">0</div>
+                    <div class="glowing-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            <!-- Left Panel: Event Tickers and Active Cases -->
+            <div class="col-lg-6 col-12 d-flex flex-column gap-4">
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-clock-history"></i> Recent Critical Audit Events</h5>
+                    <div class="overflow-y-auto flex-grow-1" id="events-ticker" style="max-height: 350px;">
+                        <p class="text-secondary small">Synchronizing timeline registries...</p>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-briefcase"></i> Active Investigation Workspaces</h5>
+                    <div class="overflow-y-auto flex-grow-1" id="cases-list" style="max-height: 250px;">
+                        <!-- Open cases list -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualizer graphs & Cytoscape Graph Preview -->
+            <div class="col-lg-6 col-12 d-flex flex-column gap-4">
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-graph-up"></i> Historical Trust & Anomaly Trends</h5>
+                    <div class="flex-grow-1" style="min-height: 200px;">
+                        <canvas id="trends-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-diagram-3"></i> Knowledge Graph Overlap Preview</h5>
+                    <div id="cy-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripting command center logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        }
+
+        function toggleProjectorMode() {
+            document.body.classList.toggle('projector-mode');
+        }
+
+        async function fetchTelemetry() {
+            try {
+                const response = await fetch('/api/v2/command-center/telemetry', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update KPIs
+                    document.getElementById('kpi-total-vendors').innerText = data.summary.total_vendors;
+                    document.getElementById('kpi-avg-trust').innerText = data.summary.avg_trust.toFixed(1);
+                    document.getElementById('kpi-avg-compliance').innerText = `${data.summary.avg_compliance}%`;
+                    document.getElementById('kpi-risk-alerts').innerText = data.summary.critical_anomalies + data.summary.active_fraud_alerts;
+
+                    // Update Events Ticker
+                    const ticker = document.getElementById('events-ticker');
+                    ticker.innerHTML = "";
+                    if (data.recent_events.length === 0) {
+                        ticker.innerHTML = `<p class="text-secondary small">No critical events logs stored.</p>`;
+                    } else {
+                        data.recent_events.forEach(event => {
+                            ticker.innerHTML += `
+                                <div class="ticker-event">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-white small fw-bold">${event.action_type}</span>
+                                        <span class="text-secondary" style="font-size: 0.7rem;">${new Date(event.timestamp).toLocaleTimeString()}</span>
+                                    </div>
+                                    <p class="text-secondary small mb-0 mt-1">${event.reason || 'Completed system override transaction.'} (Module: ${event.module_name})</p>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    // Update Active Cases
+                    const list = document.getElementById('cases-list');
+                    list.innerHTML = "";
+                    if (data.active_cases.length === 0) {
+                        list.innerHTML = `<p class="text-secondary small">No open case files registered.</p>`;
+                    } else {
+                        data.active_cases.forEach(c => {
+                            list.innerHTML += `
+                                <div class="p-2 mb-2 bg-dark rounded border border-secondary border-opacity-10 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-white small">${c.case_number}</strong>
+                                        <span class="text-secondary small d-block">Vendor: ${c.vendor_name} | Priority: ${c.priority}</span>
+                                    </div>
+                                    <a class="btn btn-sm btn-danger fw-bold" href="/investigator-workspace">Investigate</a>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Error retrieving telemetry data:", err);
+            }
+        }
+
+        // Render Cytoscape preview
+        function initGraph() {
+            cytoscape({
+                container: document.getElementById('cy-container'),
+                elements: [
+                    { data: { id: 'v1', label: 'Vendor A', type: 'vendor' } },
+                    { data: { id: 'v2', label: 'Vendor B', type: 'vendor' } },
+                    { data: { id: 'b1', label: 'Shared Bank Account', type: 'bank' } },
+                    { data: { source: 'v1', target: 'b1' } },
+                    { data: { source: 'v2', target: 'b1' } }
+                ],
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#00f2fe',
+                            'label': 'data(label)',
+                            'color': '#fff',
+                            'font-size': '10px'
+                        }
+                    },
+                    {
+                        selector: 'node[type="bank"]',
+                        style: {
+                            'background-color': '#ff4560'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#8e2de2',
+                            'target-arrow-color': '#8e2de2',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'grid',
+                    rows: 2
+                }
+            });
+        }
+
+        // Render Trends Chart
+        function initChart() {
+            const ctx = document.getElementById('trends-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    datasets: [
+                        {
+                            label: 'Trust Score Index',
+                            data: [72, 75, 71, 78, 80, 82, 85],
+                            borderColor: '#00f2fe',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Anomalies flagged',
+                            data: [4, 2, 7, 3, 1, 5, 2],
+                            borderColor: '#ff4560',
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#8c9cb5' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#8c9cb5' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#fff' } }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchTelemetry();
+            initChart();
+            initGraph();
+            // Pull every 10 seconds
+            setInterval(fetchTelemetry, 10000);
+        });
+    </script>
+</body>
+</html>

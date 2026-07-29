@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explainable AI (XAI) Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- ApexCharts for timeline & comparison charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .prediction-item {
+            padding: 16px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+        .prediction-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateX(4px);
+        }
+        .prediction-item.active {
+            background: rgba(0, 242, 254, 0.07);
+            border-left-color: var(--cyan-glow);
+        }
+
+        .xai-kpi {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .evidence-table {
+            color: var(--text-main);
+            font-size: 0.85rem;
+        }
+        .evidence-table td {
+            padding: 8px 12px;
+            border-color: rgba(255,255,255,0.05);
+        }
+        .evidence-table td:first-child {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .impact-box {
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--danger-glow);
+            background: rgba(255, 69, 96, 0.08);
+        }
+
+        .action-box {
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--success-glow);
+            background: rgba(0, 227, 150, 0.08);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🔬 EXPLAINABLE AI (XAI)</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/data-lineage"><i class="bi bi-diagram-2"></i> 🧬 Lineage</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/fraud-investigator"><i class="bi bi-shield-alert"></i> 🔍 Fraud Tracer</a>
+                <a class="btn btn-sm btn-danger fw-bold" href="/knowledge-graph"><i class="bi bi-diagram-3"></i> 🕸️ Knowledge Graph</a>
+                <a class="btn btn-sm btn-success fw-bold" href="/vendor-360"><i class="bi bi-person-bounding-box"></i> 🏢 Vendor 360</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Command Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Explainable AI Dashboard</h1>
+                <p class="text-secondary mb-0">Demystifying machine learning forecasts, confidence bands, and threat metrics.</p>
+            </div>
+            
+            <!-- Vendor Selector -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-secondary small fw-bold text-nowrap">SELECT TARGET VENDOR:</span>
+                <select class="form-select bg-dark border-secondary text-white" id="vendor-selector" onchange="loadXaiDetails()" style="min-width: 250px;">
+                    <option value="1">Vendor_1 (Consulting)</option>
+                    <!-- Will be populated dynamically with active registry profiles -->
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Column: Prediction Vectors Selection -->
+            <div class="col-lg-4 col-12">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="text-white mb-3"><i class="bi bi-cpu"></i> Prediction Objectives</h5>
+                    <p class="text-secondary small mb-4">Select an active neural prediction indicator below to audit model reasoning, weights, and impacts.</p>
+                    
+                    <div class="d-flex flex-column gap-2" id="predictions-list-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Audit Explanations Center -->
+            <div class="col-lg-8 col-12">
+                <div class="glass-card p-4" id="xai-explanation-details">
+                    <!-- Dynamic XAI Audit Report content loaded here -->
+                    <div class="text-center py-5 text-secondary">
+                        <div class="spinner-border text-info mb-3" role="status"></div>
+                        <p>Compiling Explainable AI telemetry logs...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripting and ApexCharts logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        let predictionsData = [];
+        let selectedIndex = 0;
+        let timelineChart = null;
+        let comparisonChart = null;
+
+        async function populateVendorList() {
+            try {
+                // Fetch list from search endpoint or top vendors
+                const response = await fetch('/api/v2/vendors/search?limit=15', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    selector.innerHTML = "";
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name} (${v.category})</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Error populating vendors selector:", err);
+            }
+        }
+
+        async function loadXaiDetails() {
+            const vid = document.getElementById('vendor-selector').value;
+            
+            try {
+                const response = await fetch(`/api/v2/analytics/xai?vendor_id=${vid}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!data.success) return;
+
+                predictionsData = data.predictions;
+                renderPredictionsList();
+                renderSelectedExplanation();
+            } catch (err) {
+                console.error("Error loading XAI explanation details:", err);
+            }
+        }
+
+        function renderPredictionsList() {
+            const container = document.getElementById('predictions-list-container');
+            container.innerHTML = "";
+
+            predictionsData.forEach((p, idx) => {
+                const activeCls = idx === selectedIndex ? 'active' : '';
+                container.innerHTML += `
+                    <div class="glass-card prediction-item ${activeCls}" onclick="selectPrediction(${idx})">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-white small">${p.name}</strong>
+                            <span class="badge bg-dark text-cyan border border-info border-opacity-20 py-1" style="font-size: 0.75rem;">${p.confidence}% Conf.</span>
+                        </div>
+                        <div class="text-secondary small text-truncate">${p.prediction_value}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectPrediction(idx) {
+            selectedIndex = idx;
+            renderPredictionsList();
+            renderSelectedExplanation();
+        }
+
+        function renderSelectedExplanation() {
+            const p = predictionsData[selectedIndex];
+            const detailsDiv = document.getElementById('xai-explanation-details');
+            if (!p) return;
+
+            // Prepare evidence rows
+            let evidenceRows = "";
+            for (const [key, value] of Object.entries(p.evidence)) {
+                evidenceRows += `
+                    <tr>
+                        <td>${key}</td>
+                        <td class="text-white fw-bold">${value}</td>
+                    </tr>
+                `;
+            }
+
+            // Prepare supporting check lists
+            let supportingChecks = "";
+            p.supporting_data.forEach(item => {
+                supportingChecks += `
+                    <div class="d-flex align-items-center gap-2 mb-2 text-secondary small">
+                        <i class="bi bi-patch-check-fill text-cyan"></i>
+                        <span>${item}</span>
+                    </div>
+                `;
+            });
+
+            detailsDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+                    <div>
+                        <h4 class="accent-text-glow font-weight-bold mb-1">${p.name}</h4>
+                        <p class="text-secondary small mb-0">Model prediction output explanation profile.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="xai-kpi">
+                            <span class="text-secondary small d-block mb-1">CONFIDENCE</span>
+                            <span class="fs-4 fw-bold text-cyan">${p.confidence}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <!-- Left Details: Why, impact, actions -->
+                    <div class="col-md-7 col-12 d-flex flex-column gap-3">
+                        
+                        <!-- Prediction value & explanation -->
+                        <div class="p-3 rounded" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small fw-bold d-block mb-1">PREDICTION DECISION</span>
+                            <h5 class="text-white fw-bold mb-2">${p.prediction_value}</h5>
+                            <span class="text-secondary small d-block"><strong>Why?</strong> ${p.why}</span>
+                        </div>
+
+                        <!-- Business Impact -->
+                        <div class="impact-box">
+                            <span class="text-danger small fw-bold d-block mb-1"><i class="bi bi-shield-slash"></i> ESTIMATED BUSINESS IMPACT</span>
+                            <span class="text-secondary small">${p.business_impact}</span>
+                        </div>
+
+                        <!-- Action Items -->
+                        <div class="action-box">
+                            <span class="text-success small fw-bold d-block mb-1"><i class="bi bi-lightbulb"></i> RECOMMENDED AUDIT ACTION</span>
+                            <span class="text-secondary small">${p.suggested_action}</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Details: Supporting evidence & Checklist -->
+                    <div class="col-md-5 col-12 d-flex flex-column gap-3">
+                        
+                        <!-- Checklist -->
+                        <div class="p-3 rounded border border-secondary border-opacity-10">
+                            <span class="text-secondary small fw-bold d-block mb-2">SUPPORTING AUDIT CHECKS</span>
+                            ${supportingChecks}
+                        </div>
+
+                        <!-- Evidence Table -->
+                        <div class="p-3 rounded border border-secondary border-opacity-10">
+                            <span class="text-secondary small fw-bold d-block mb-2">RAW MODEL EVIDENCE</span>
+                            <table class="table table-sm table-borderless evidence-table mb-0">
+                                <tbody>
+                                    ${evidenceRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphs Section -->
+                <div class="row g-4">
+                    <!-- Projected Timeline Chart -->
+                    <div class="col-md-6 col-12">
+                        <div class="p-3 rounded border border-secondary border-opacity-10">
+                            <span class="text-secondary small fw-bold d-block mb-3"><i class="bi bi-graph-up"></i> Projected Timeline (6-Month Forecast)</span>
+                            <div id="xai-timeline-chart"></div>
+                        </div>
+                    </div>
+
+                    <!-- Registry Comparison Chart -->
+                    <div class="col-md-6 col-12">
+                        <div class="p-3 rounded border border-secondary border-opacity-10">
+                            <span class="text-secondary small fw-bold d-block mb-3"><i class="bi bi-bar-chart"></i> Registry Benchmark Comparison</span>
+                            <div id="xai-comparison-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Render Timeline ApexChart
+            const timelineOptions = {
+                series: [{ name: 'Projected Value', data: p.timeline.values }],
+                chart: { type: 'area', height: 200, toolbar: { show: false } },
+                colors: ['#00f2fe'],
+                stroke: { curve: 'smooth', width: 2 },
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02, stops: [0, 95, 100] }
+                },
+                xaxis: { categories: p.timeline.labels, labels: { style: { colors: '#8c9cb5' } } },
+                yaxis: { labels: { style: { colors: '#8c9cb5' } } },
+                grid: { borderColor: 'rgba(255,255,255,0.05)' },
+                theme: { mode: 'dark' }
+            };
+
+            if (timelineChart) timelineChart.destroy();
+            timelineChart = new ApexCharts(document.querySelector("#xai-timeline-chart"), timelineOptions);
+            timelineChart.render();
+
+            // Render Comparison ApexChart
+            const compOptions = {
+                series: [{
+                    name: 'Performance Indicators',
+                    data: [p.comparison.vendor_value, p.comparison.registry_average]
+                }],
+                chart: { type: 'bar', height: 200, toolbar: { show: false } },
+                plotOptions: { bar: { columnWidth: '45%', borderRadius: 4, distributed: true } },
+                colors: ['#00e396', '#8c9cb5'],
+                xaxis: {
+                    categories: ['Target Vendor', 'Registry Average'],
+                    labels: { style: { colors: '#8c9cb5' } }
+                },
+                yaxis: { labels: { style: { colors: '#8c9cb5' } } },
+                grid: { borderColor: 'rgba(255,255,255,0.05)' },
+                theme: { mode: 'dark' },
+                legend: { show: false }
+            };
+
+            if (comparisonChart) comparisonChart.destroy();
+            comparisonChart = new ApexCharts(document.querySelector("#xai-comparison-chart"), compOptions);
+            comparisonChart.render();
+        }
+
+        // Initialize load sequence
+        window.addEventListener('DOMContentLoaded', async () => {
+            await populateVendorList();
+            await loadXaiDetails();
+        });
+    </script>
+</body>
+</html>

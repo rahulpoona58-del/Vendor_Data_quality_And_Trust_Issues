@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Fraud Investigation Workspace</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Cytoscape.js for interactive mapping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        #cy-canvas {
+            height: 550px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.25);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .pattern-item {
+            padding: 14px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .pattern-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .pattern-item.active {
+            background: rgba(255, 69, 96, 0.08);
+            border-left-color: var(--danger-glow);
+        }
+
+        .explanation-box {
+            border-radius: 12px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--card-border);
+        }
+
+        .severity-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .severity-badge.critical { background: var(--danger-glow); color: white; }
+        .severity-badge.high { background: #ffb01a; color: black; }
+        .severity-badge.medium { background: var(--info-glow); color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🔍 FRAUD PATTERNS INVESTIGATOR</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/data-lineage"><i class="bi bi-diagram-2"></i> 🧬 Lineage</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column mb-4">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Graph Fraud Investigation Console</h1>
+                <p class="text-secondary mb-0">Trace, analyze, and inspect multi-hop relational threat paths dynamically.</p>
+            </div>
+            
+            <!-- Vendor Selector -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-secondary small fw-bold text-nowrap">SELECT TARGET PROFILE:</span>
+                <select class="form-select bg-dark border-secondary text-white" id="vendor-selector" onchange="loadFraudPatterns()" style="min-width: 250px;">
+                    <!-- Will be populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            
+            <!-- Left Column: Detected Patterns list & explanations -->
+            <div class="col-lg-4 col-12 d-flex flex-column gap-3">
+                
+                <!-- Patterns List -->
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-cpu"></i> Flagged Graph Anomalies</h5>
+                    <div id="patterns-list-container">
+                        <!-- Loaded dynamically -->
+                        <div class="text-center py-4 text-secondary">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation Panel -->
+                <div class="glass-card p-4 flex-grow-1" id="pattern-explanation-details">
+                    <h5 class="text-white mb-3"><i class="bi bi-journal-text"></i> Investigation Details</h5>
+                    <p class="text-secondary small mb-0 text-center py-5">Click on a flagged anomaly above to trace its relationship path and read recommendations.</p>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Visual path tracer Cytoscape Canvas -->
+            <div class="col-lg-8 col-12 d-flex flex-column">
+                <div class="glass-card p-3 flex-grow-1 position-relative">
+                    <div class="position-absolute top-0 start-0 m-4 z-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="fitGraph()" title="Center Graph"><i class="bi bi-arrows-fullscreen"></i> Reset Center</button>
+                    </div>
+                    <div id="cy-canvas"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripting Cytoscape and path highlights -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        let activePatterns = [];
+        let selectedPatternIndex = 0;
+        let cyInstance = null;
+
+        async function populateVendorList() {
+            try {
+                // Populate selector list from vendors search endpoint
+                const response = await fetch('/api/v2/vendors/search?limit=1000', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    selector.innerHTML = "";
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name} (${v.category})</option>`;
+                    });
+                    if (data.results.length > 0) {
+                        loadFraudPatterns();
+                    }
+                }
+            } catch (err) {
+                console.error("Error populating vendors list:", err);
+            }
+        }
+
+        async function loadFraudPatterns() {
+            const vid = document.getElementById('vendor-selector').value;
+            
+            try {
+                // Fetch graph fraud patterns
+                const response = await fetch(`/api/v2/fraud/graph-patterns?vendor_id=${vid}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    activePatterns = data.patterns;
+                    renderPatternsList();
+                    
+                    // Fetch graph elements to render Cytoscape
+                    const graphResp = await fetch(`/api/v2/analytics/knowledge-graph?vendor_id=${vid}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const gData = await graphResp.json();
+                    if (gData.success) {
+                        renderNetworkGraph(gData.elements);
+                        if (activePatterns.length > 0) {
+                            selectPattern(0);
+                        } else {
+                            document.getElementById('pattern-explanation-details').innerHTML = `
+                                <h5 class="text-white mb-3"><i class="bi bi-journal-text"></i> Investigation Details</h5>
+                                <p class="text-success small mb-0 text-center py-5"><i class="bi bi-shield-check fs-4"></i><br/>No relational fraud patterns detected for this profile.</p>
+                            `;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error loading graph fraud patterns:", err);
+            }
+        }
+
+        function renderPatternsList() {
+            const container = document.getElementById('patterns-list-container');
+            container.innerHTML = "";
+
+            if (activePatterns.length === 0) {
+                container.innerHTML = `<div class="text-success text-center py-3 small">No suspicious rings detected.</div>`;
+                return;
+            }
+
+            activePatterns.forEach((p, idx) => {
+                const activeCls = idx === selectedPatternIndex ? 'active' : '';
+                const sevCls = p.severity === 'Critical' ? 'critical' : (p.severity === 'High' ? 'high' : 'medium');
+                
+                container.innerHTML += `
+                    <div class="glass-card pattern-item ${activeCls}" onclick="selectPattern(${idx})">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-white small">${p.pattern}</strong>
+                            <span class="severity-badge ${sevCls}">${p.severity}</span>
+                        </div>
+                        <div class="text-secondary small">${p.confidence}% Confidence | trace path</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectPattern(idx) {
+            selectedPatternIndex = idx;
+            renderPatternsList();
+            renderExplanation();
+            tracePathOnGraph();
+        }
+
+        function renderExplanation() {
+            const p = activePatterns[selectedPatternIndex];
+            const container = document.getElementById('pattern-explanation-details');
+            if (!p) return;
+
+            const sevCls = p.severity === 'Critical' ? 'critical' : (p.severity === 'High' ? 'high' : 'medium');
+
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-1">
+                    <h5 class="text-white fw-bold mb-0">${p.pattern}</h5>
+                    <span class="severity-badge ${sevCls}">${p.severity}</span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.08)" class="my-2">
+                
+                <div class="d-flex flex-column gap-3 text-secondary small">
+                    <div class="explanation-box">
+                        <span class="text-secondary small fw-bold d-block mb-1">DETERMINISTIC EVIDENCE</span>
+                        <div class="text-white">${p.evidence}</div>
+                    </div>
+                    
+                    <div>
+                        <span class="text-secondary small fw-bold d-block mb-1">PATHWAY EXPLANATION</span>
+                        <p class="mb-0 text-secondary">${p.explanation}</p>
+                    </div>
+
+                    <div class="explanation-box border-danger border-opacity-30" style="background: rgba(255,69,96,0.04)">
+                        <span class="text-danger small fw-bold d-block mb-1"><i class="bi bi-shield-alert"></i> SUGGESTED AUDIT ACTION</span>
+                        <p class="mb-0 text-white">${p.recommendation}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNetworkGraph(elements) {
+            cyInstance = cytoscape({
+                container: document.getElementById('cy-canvas'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'color': '#f3f6fa',
+                            'font-family': 'Outfit, sans-serif',
+                            'font-size': '10px',
+                            'text-margin-y': -8,
+                            'background-color': 'data(color)',
+                            'width': 22,
+                            'height': 22
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': 'data(color)',
+                            'curve-style': 'bezier',
+                            'label': 'data(label)',
+                            'font-size': '6px',
+                            'color': '#8c9cb5',
+                            'text-rotation': 'autorotate',
+                            'target-arrow-shape': 'triangle',
+                            'target-arrow-color': 'data(color)',
+                            'arrow-scale': 0.8
+                        }
+                    }
+                ],
+                layout: { name: 'cose', animate: false }
+            });
+        }
+
+        function tracePathOnGraph() {
+            if (!cyInstance) return;
+            const p = activePatterns[selectedPatternIndex];
+            if (!p) return;
+
+            const path = p.relationship_path;
+            
+            // Fade out all elements
+            cyInstance.nodes().style('opacity', 0.15);
+            cyInstance.edges().style('opacity', 0.05);
+
+            // Highlight path elements
+            path.forEach(nid => {
+                const node = cyInstance.getElementById(nid);
+                if (node) {
+                    node.style({
+                        'opacity': 1.0,
+                        'border-width': 3,
+                        'border-color': '#ff4560'
+                    });
+                }
+            });
+
+            // Highlight edges matching path hops
+            for (let i = 0; i < path.length - 1; i++) {
+                const source = path[i];
+                const target = path[i+1];
+                
+                // Find matching edge
+                const edge = cyInstance.edges().filter(e => {
+                    return (e.data('source') === source && e.data('target') === target) ||
+                           (e.data('source') === target && e.data('target') === source);
+                });
+                
+                if (edge) {
+                    edge.style({
+                        'opacity': 1.0,
+                        'width': 4.5,
+                        'line-color': '#ff4560',
+                        'target-arrow-color': '#ff4560'
+                    });
+                }
+            }
+
+            // Fit layout viewport around highlighted nodes
+            const fitNodes = cyInstance.nodes().filter(n => path.includes(n.id()));
+            if (fitNodes.length > 0) {
+                cyInstance.animate({
+                    fit: { Eles: fitNodes, padding: 50 }
+                }, { duration: 400 });
+            }
+        }
+
+        function fitGraph() {
+            if (cyInstance) cyInstance.fit();
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', populateVendorList);
+    </script>
+
+</body>
+</html>

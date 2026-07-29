@@ -1,0 +1,37 @@
+# Git repository metadata
+.git
+.gitignore
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+
+# Secret and configuration files
+.env
+.env.local
+.env.*.local
+
+# Instance and dynamic user uploads
+instance/
+uploads/*
+!uploads/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# IDE and OS metadata files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Documentation and temporary artifact folders
+*.md
+brain/
+scratch/
+coverage/
+.pytest_cache/

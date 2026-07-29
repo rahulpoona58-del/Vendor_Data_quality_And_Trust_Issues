@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Risk & Trust What-If Simulation Engine</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+            --warning-glow: #ffb01a;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.1) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 40px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .simulation-watermark {
+            border: 2px dashed var(--warning-glow);
+            color: var(--warning-glow);
+            font-weight: 800;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            display: inline-block;
+            box-shadow: 0 0 10px rgba(255, 176, 26, 0.15);
+        }
+
+        .comparison-metric-box {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .comparison-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .before-val {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-secondary);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .arrow-indicator {
+            font-size: 1.2rem;
+            color: var(--cyan-glow);
+            margin: 0 10px;
+        }
+
+        .after-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        .after-val.up {
+            color: var(--success-glow);
+            text-shadow: 0 0 15px rgba(0, 227, 150, 0.2);
+        }
+
+        .after-val.down {
+            color: var(--danger-glow);
+            text-shadow: 0 0 15px rgba(255, 69, 96, 0.2);
+        }
+
+        .switch-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .switch-control:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🛠️ WHAT-IF SIMULATOR</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">What-If Risk & Trust Simulation Sandbox</h1>
+                <p class="text-secondary mb-0">Model hypothetical compliance parameters, audits, and fraud signals in an isolated environment.</p>
+            </div>
+            
+            <div>
+                <span class="simulation-watermark"><i class="bi bi-shield-slash"></i> Sandboxed Environment (Write Disabled)</span>
+            </div>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            
+            <!-- Left Side: Simulator Controls -->
+            <div class="col-lg-5 col-12 d-flex flex-column">
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-person-check"></i> 1. Select Target Vendor</h5>
+                    <select class="form-select bg-dark border-secondary text-white" id="vendor-selector" onchange="loadVendorBaseAndRun()">
+                        <option value="">-- Choose Vendor --</option>
+                    </select>
+                </div>
+
+                <div class="glass-card p-4 flex-grow-1">
+                    <h5 class="text-white mb-3"><i class="bi bi-sliders"></i> 2. Toggle Hypothetical Changes</h5>
+                    
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">GST Certification Verification</strong>
+                            <span class="text-secondary small">Does the vendor hold active verified GST records?</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-gst" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">PAN Card Verification</strong>
+                            <span class="text-secondary small">Does the vendor hold active verified PAN details?</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-pan" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">Bank Proof Verification</strong>
+                            <span class="text-secondary small">Are bank details fully verified and active?</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-bank" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">Duplicate Identities Discovered</strong>
+                            <span class="text-secondary small">Flag matching addresses, PANs, or directorships.</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-duplicate" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">Force Expiry of Compliance Documents</strong>
+                            <span class="text-secondary small">Simulate compliance documents expiry alert status.</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-expired" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">Correct Missing Fields / Typos</strong>
+                            <span class="text-secondary small">Simulate resolving spelling suggestions and empty fields.</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-missing" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="switch-control">
+                        <div>
+                            <strong class="text-white d-block">Add Fraud / Collusion Evidence</strong>
+                            <span class="text-secondary small">Simulate high risk fraud threat patterns detected.</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sim-fraud" onchange="runSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="form-label text-secondary small d-flex justify-content-between">
+                            <span>SIMULATED QUALITY RATING:</span>
+                            <strong class="text-cyan" id="quality-val-label">4.0</strong>
+                        </label>
+                        <input type="range" class="form-range" min="1.0" max="5.0" step="0.5" id="sim-quality" value="4.0" oninput="updateQualityLabel(); runSimulation();">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Simulation Results comparison panel -->
+            <div class="col-lg-7 col-12 d-flex flex-column">
+                <div class="glass-card p-4 flex-grow-1" id="simulation-results-panel">
+                    <div class="text-center py-5">
+                        <i class="bi bi-cpu text-secondary fs-1"></i>
+                        <h5 class="text-white mt-3">Ready to Simulate</h5>
+                        <p class="text-secondary small">Select a target vendor and toggles to start the What-If simulation engine.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripting simulator logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        function updateQualityLabel() {
+            document.getElementById('quality-val-label').innerText = document.getElementById('sim-quality').value;
+        }
+
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/v2/vendors/search?limit=100', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading vendors list:", err);
+            }
+        }
+
+        let baseData = null;
+
+        async function loadVendorBaseAndRun() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            if (!vendorId) {
+                document.getElementById('simulation-results-panel').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-cpu text-secondary fs-1"></i>
+                        <h5 class="text-white mt-3">Ready to Simulate</h5>
+                        <p class="text-secondary small">Select a target vendor and toggles to start the What-If simulation engine.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                // Fetch actual state first
+                const response = await fetch(`/api/v2/vendors/${vendorId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    baseData = data.vendor;
+                    
+                    // Reset inputs to match base state
+                    document.getElementById('sim-gst').checked = baseData.gst_verified || false;
+                    document.getElementById('sim-pan').checked = baseData.pan_verified || false;
+                    document.getElementById('sim-bank').checked = baseData.bank_verified || false;
+                    document.getElementById('sim-duplicate').checked = false;
+                    document.getElementById('sim-expired').checked = false;
+                    document.getElementById('sim-missing').checked = false;
+                    document.getElementById('sim-fraud').checked = false;
+                    document.getElementById('sim-quality').value = baseData.quality_rating || 4.0;
+                    updateQualityLabel();
+
+                    runSimulation();
+                }
+            } catch (err) {
+                console.error("Error loading vendor details:", err);
+            }
+        }
+
+        async function runSimulation() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            if (!vendorId) return;
+
+            const overrides = {
+                gst_verified: document.getElementById('sim-gst').checked,
+                pan_verified: document.getElementById('sim-pan').checked,
+                bank_verified: document.getElementById('sim-bank').checked,
+                duplicate_relationship: document.getElementById('sim-duplicate').checked,
+                compliance_docs_expired: document.getElementById('sim-expired').checked,
+                missing_fields_corrected: document.getElementById('sim-missing').checked,
+                fraud_evidence_added: document.getElementById('sim-fraud').checked,
+                quality_rating: parseFloat(document.getElementById('sim-quality').value)
+            };
+
+            try {
+                const response = await fetch('/api/v2/simulation/what-if', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ vendor_id: vendorId, overrides: overrides })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    renderSimulationResults(result);
+                }
+            } catch (err) {
+                console.error("Error running simulation request:", err);
+            }
+        }
+
+        function renderSimulationResults(res) {
+            const panel = document.getElementById('simulation-results-panel');
+            const before = res.before;
+            const after = res.after;
+
+            const trustDiff = after.trust_score - before.trust_score;
+            const trustClass = trustDiff > 0 ? 'up' : (trustDiff < 0 ? 'down' : '');
+            const trustSymbol = trustDiff > 0 ? `(+${trustDiff.toFixed(1)})` : (trustDiff < 0 ? `(${trustDiff.toFixed(1)})` : '');
+
+            const riskDiff = after.risk_score - before.risk_score;
+            const riskClass = riskDiff > 0 ? 'down' : (riskDiff < 0 ? 'up' : '');
+            const riskSymbol = riskDiff > 0 ? `(+${riskDiff.toFixed(1)})` : (riskDiff < 0 ? `(${riskDiff.toFixed(1)})` : '');
+
+            let rulesHtml = "";
+            res.affected_rules.forEach(rule => {
+                rulesHtml += `<li class="text-white py-1"><i class="bi bi-info-circle text-info me-2"></i>${rule}</li>`;
+            });
+            if (res.affected_rules.length === 0) {
+                rulesHtml = "<li class='text-secondary small'>No rule thresholds triggered in this simulation run.</li>";
+            }
+
+            panel.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <div>
+                        <h4 class="text-white fw-bold mb-1">${res.vendor_name}</h4>
+                        <span class="badge bg-warning text-dark fw-bold uppercase"><i class="bi bi-exclamation-triangle"></i> Simulation Mode Active</span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <!-- Trust Score -->
+                    <div class="col-sm-6">
+                        <div class="comparison-metric-box">
+                            <span class="comparison-label">Trust Score</span>
+                            <div class="d-flex align-items-center justify-content-center">
+                                <span class="before-val">${before.trust_score.toFixed(1)}</span>
+                                <span class="arrow-indicator">&rarr;</span>
+                                <span class="after-val ${trustClass}">${after.trust_score.toFixed(1)}</span>
+                            </div>
+                            <span class="text-secondary small">${trustSymbol}</span>
+                        </div>
+                    </div>
+
+                    <!-- Risk Score -->
+                    <div class="col-sm-6">
+                        <div class="comparison-metric-box">
+                            <span class="comparison-label">Risk Score</span>
+                            <div class="d-flex align-items-center justify-content-center">
+                                <span class="before-val">${before.risk_score.toFixed(1)}%</span>
+                                <span class="arrow-indicator">&rarr;</span>
+                                <span class="after-val ${riskClass}">${after.risk_score.toFixed(1)}%</span>
+                            </div>
+                            <span class="text-secondary small">${riskSymbol}</span>
+                        </div>
+                    </div>
+
+                    <!-- Compliance Score -->
+                    <div class="col-md-4 col-sm-6">
+                        <div class="comparison-metric-box py-2">
+                            <span class="comparison-label">Compliance</span>
+                            <span class="text-white small fw-bold">${before.compliance_score.toFixed(0)}% &rarr; ${after.compliance_score.toFixed(0)}%</span>
+                        </div>
+                    </div>
+
+                    <!-- Health Index -->
+                    <div class="col-md-4 col-sm-6">
+                        <div class="comparison-metric-box py-2">
+                            <span class="comparison-label">Health Index</span>
+                            <span class="text-white small fw-bold">${before.health_score.toFixed(0)} (${before.health_category}) &rarr; ${after.health_score.toFixed(0)} (${after.health_category})</span>
+                        </div>
+                    </div>
+
+                    <!-- Reputation Tier -->
+                    <div class="col-md-4 col-sm-6">
+                        <div class="comparison-metric-box py-2">
+                            <span class="comparison-label">Reputation Tier</span>
+                            <span class="text-white small fw-bold">${before.reputation_tier} &rarr; ${after.reputation_tier}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.08)" class="my-4">
+
+                <!-- Affected Rules -->
+                <div class="mb-4">
+                    <h6 class="text-secondary uppercase fw-bold mb-2"><i class="bi bi-sliders"></i> Triggered Scoring Adjustments</h6>
+                    <ul class="list-unstyled mb-0">
+                        ${rulesHtml}
+                    </ul>
+                </div>
+
+                <!-- Business Impact -->
+                <div class="mb-4 p-3 bg-dark border border-secondary border-opacity-25 rounded-3">
+                    <h6 class="text-warning fw-bold small mb-2"><i class="bi bi-cone-striped"></i> Hypothetical Business Impact</h6>
+                    <p class="mb-0 text-white small">${res.business_impact}</p>
+                </div>
+
+                <!-- Recommended action -->
+                <div class="p-3 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3">
+                    <h6 class="text-info fw-bold small mb-2"><i class="bi bi-lightbulb"></i> Recommended Actions</h6>
+                    <p class="mb-0 text-white small">${res.recommended_action}</p>
+                </div>
+            `;
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', () => {
+            loadVendors();
+        });
+    </script>
+</body>
+</html>

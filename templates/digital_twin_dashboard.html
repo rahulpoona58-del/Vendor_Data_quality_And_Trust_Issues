@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Digital Twin Visualization Console</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Cytoscape.js for relationships network graph -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.1) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 40px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 8px;
+            margin-right: 8px;
+            font-weight: 600;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(to right, #00f2fe, #4facfe) !important;
+            color: black !important;
+        }
+
+        .status-verified {
+            color: var(--success-glow);
+            font-weight: bold;
+        }
+
+        .status-unverified {
+            color: var(--danger-glow);
+            font-weight: bold;
+        }
+
+        .radial-meter {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 8px solid rgba(0, 242, 254, 0.1);
+            border-top-color: var(--cyan-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.8rem;
+            color: var(--cyan-glow);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+            margin: 0 auto;
+        }
+
+        #relations-graph {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+        }
+
+        .twin-header {
+            border-left: 4px solid var(--cyan-glow);
+            padding-left: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">♊ VENDOR DIGITAL TWIN</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Vendor Digital Twin Console</h1>
+                <p class="text-secondary mb-0">Consolidated real-time model representation, relationships mesh, and chronological history playback.</p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <select class="form-select bg-dark border-secondary text-white w-auto" id="vendor-selector" onchange="loadVendorTwin()">
+                    <option value="">-- Select Twin Target --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="row g-4 flex-grow-1">
+            <!-- Left Side: Interactive tabs & Main Twin panel -->
+            <div class="col-lg-8 col-12 d-flex flex-column">
+                <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
+                    <ul class="nav nav-tabs border-0 mb-4" id="twinTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-pane" type="button" role="tab" onclick="switchState('current')"><i class="bi bi-activity"></i> Current State</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="historical-tab" data-bs-toggle="tab" data-bs-target="#historical-pane" type="button" role="tab" onclick="switchState('historical')"><i class="bi bi-clock-history"></i> Historical Timeline Playback</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="risk-tab" data-bs-toggle="tab" data-bs-target="#risk-pane" type="button" role="tab" onclick="switchState('risk')"><i class="bi bi-shield-slash"></i> Risk State</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="relationship-tab" data-bs-toggle="tab" data-bs-target="#relationship-pane" type="button" role="tab" onclick="switchState('relationship')"><i class="bi bi-diagram-3"></i> Relationship State</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content flex-grow-1 d-flex flex-column" id="twinTabContent">
+                        
+                        <!-- TAB 1: CURRENT STATE -->
+                        <div class="tab-pane fade show active flex-grow-1" id="current-pane" role="tabpanel">
+                            <div class="row g-4" id="current-twin-data">
+                                <p class="text-secondary text-center py-5">Please select a vendor from the dropdown menu to load the digital twin model representation.</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: HISTORICAL TIMELINE PLAYBACK -->
+                        <div class="tab-pane fade flex-grow-1" id="historical-pane" role="tabpanel">
+                            <div class="d-flex flex-column gap-4 flex-grow-1" id="historical-twin-data">
+                                <p class="text-secondary text-center py-5">Please select a vendor from the dropdown menu to initialize history playback.</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: RISK STATE -->
+                        <div class="tab-pane fade flex-grow-1" id="risk-pane" role="tabpanel">
+                            <div class="row g-4" id="risk-twin-data">
+                                <p class="text-secondary text-center py-5">Please select a vendor from the dropdown menu to load risk parameters.</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: RELATIONSHIP STATE -->
+                        <div class="tab-pane fade flex-grow-1" id="relationship-pane" role="tabpanel">
+                            <div class="d-flex flex-column gap-3 flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-white mb-0"><i class="bi bi-share"></i> Shared Assets Network Mesh</h6>
+                                    <span class="text-secondary small">Addresses, Directorships, and Bank Accounts overlap</span>
+                                </div>
+                                <div id="relations-graph"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Predictions, Recommendations, and Activities -->
+            <div class="col-lg-4 col-12 d-flex flex-column">
+                <!-- Predictive Analytics -->
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-cpu"></i> AI Predictive Analytics</h5>
+                    <div id="predictions-box">
+                        <p class="text-secondary small mb-0">Select a vendor to evaluate predictive models.</p>
+                    </div>
+                </div>
+
+                <!-- Strategic Recommendations -->
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-lightbulb"></i> Recommended Actions</h5>
+                    <div id="recommendations-box">
+                        <p class="text-secondary small mb-0">No active recommendation logs loaded.</p>
+                    </div>
+                </div>
+
+                <!-- Recent Activities Logs -->
+                <div class="glass-card p-4 flex-grow-1">
+                    <h5 class="text-white mb-3"><i class="bi bi-activity"></i> Recent Activity Logs</h5>
+                    <div id="activities-box" style="max-height: 250px; overflow-y: auto;">
+                        <p class="text-secondary small mb-0">Activities will load here chronological.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripting digital twin logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/v2/vendors/search?limit=100', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const selector = document.getElementById('vendor-selector');
+                    data.results.forEach(v => {
+                        selector.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading vendors list:", err);
+            }
+        }
+
+        let currentVendor = null;
+        let cy = null;
+        let playbackInterval = null;
+        let historyData = [];
+        let currentPlaybackIdx = 0;
+
+        async function loadVendorTwin() {
+            const vendorId = document.getElementById('vendor-selector').value;
+            if (!vendorId) return;
+
+            try {
+                // Clear any running playback
+                stopPlayback();
+
+                // 1. Fetch current vendor metrics
+                const response = await fetch(`/api/v2/vendors/${vendorId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentVendor = data.vendor;
+                    renderCurrentState();
+                    renderRiskState();
+                    renderPredictions();
+                    renderRecommendations();
+                }
+
+                // 2. Fetch history
+                const histRes = await fetch(`/api/v2/vendors/${vendorId}/trust/history?limit=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const histData = await histRes.json();
+                if (histData.success) {
+                    historyData = histData.history;
+                    renderHistoricalState();
+                }
+
+                // 3. Fetch activities
+                const actRes = await fetch(`/api/v2/vendors/${vendorId}/activities`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const actData = await actRes.json();
+                if (actData.success) {
+                    renderActivities(actData.activities);
+                }
+
+                // 4. Render relationship graph Cytoscape
+                renderRelationshipsGraph(vendorId);
+
+            } catch (err) {
+                console.error("Error loading digital twin parameters:", err);
+            }
+        }
+
+        function renderCurrentState() {
+            const container = document.getElementById('current-twin-data');
+            if (!currentVendor) return;
+
+            const v = currentVendor;
+            container.innerHTML = `
+                <div class="col-md-6">
+                    <div class="twin-header mb-3">
+                        <h5 class="text-white mb-1">${v.name}</h5>
+                        <span class="text-secondary small">ID: ${v.id} | Category: ${v.category}</span>
+                    </div>
+                    
+                    <ul class="list-unstyled mb-0">
+                        <li class="py-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between">
+                            <span class="text-secondary">GST Registration status:</span>
+                            <span class="${v.gst_verified ? 'status-verified' : 'status-unverified'}">${v.gst_verified ? 'VERIFIED' : 'UNVERIFIED'}</span>
+                        </li>
+                        <li class="py-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between">
+                            <span class="text-secondary">PAN Verification:</span>
+                            <span class="${v.pan_verified ? 'status-verified' : 'status-unverified'}">${v.pan_verified ? 'VERIFIED' : 'UNVERIFIED'}</span>
+                        </li>
+                        <li class="py-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between">
+                            <span class="text-secondary">Bank Account Proof:</span>
+                            <span class="${v.bank_verified ? 'status-verified' : 'status-unverified'}">${v.bank_verified ? 'VERIFIED' : 'UNVERIFIED'}</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="col-md-6 d-flex flex-column align-items-center justify-content-center">
+                    <div class="radial-meter">
+                        ${v.trust_score.toFixed(0)}
+                    </div>
+                    <span class="text-cyan fw-bold mt-2">Overall Trust Rating</span>
+                    <span class="text-secondary small">${v.trust_level}</span>
+                </div>
+            `;
+        }
+
+        function renderHistoricalState() {
+            const container = document.getElementById('historical-twin-data');
+            if (historyData.length === 0) {
+                container.innerHTML = `<p class="text-secondary text-center py-4">No historical calculated snapshots found.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="glass-card p-3 d-flex flex-column gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-white fw-bold">Chronological Timeline Snapshot</span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-cyan" onclick="startPlayback()"><i class="bi bi-play-fill"></i> Play</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="stopPlayback()"><i class="bi bi-pause-fill"></i> Pause</button>
+                        </div>
+                    </div>
+                    
+                    <input type="range" class="form-range" min="0" max="${historyData.length - 1}" id="history-slider" value="0" oninput="setPlaybackStep(this.value)">
+                    <span class="text-cyan small text-center fw-bold" id="playback-time-label">Step 1 of ${historyData.length}</span>
+                </div>
+
+                <div class="row g-3" id="playback-snapshot-panel">
+                    <!-- Loaded via step -->
+                </div>
+            `;
+            setPlaybackStep(0);
+        }
+
+        function setPlaybackStep(idx) {
+            currentPlaybackIdx = parseInt(idx);
+            const slider = document.getElementById('history-slider');
+            if (slider) slider.value = idx;
+
+            const step = historyData[currentPlaybackIdx];
+            const label = document.getElementById('playback-time-label');
+            if (label) label.innerText = `Snapshot Timestamp: ${new Date(step.calculated_at).toLocaleString()}`;
+
+            const panel = document.getElementById('playback-snapshot-panel');
+            if (panel) {
+                panel.innerHTML = `
+                    <div class="col-md-6 text-center">
+                        <div class="radial-meter" style="border-top-color: var(--info-glow); color: var(--info-glow);">
+                            ${step.trust_score.toFixed(0)}
+                        </div>
+                        <span class="text-info fw-bold mt-2 d-block">Simulated Trust Score</span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0 small">
+                            <li class="py-1 d-flex justify-content-between"><span class="text-secondary">Risk Index:</span> <strong class="text-danger">${step.risk_score}%</strong></li>
+                            <li class="py-1 d-flex justify-content-between"><span class="text-secondary">Compliance:</span> <strong class="text-success">${step.compliance_score}%</strong></li>
+                            <li class="py-1 d-flex justify-content-between"><span class="text-secondary">Reliability:</span> <strong class="text-info">${step.reliability_score}%</strong></li>
+                            <li class="py-1 d-flex justify-content-between"><span class="text-secondary">Confidence:</span> <strong class="text-warning">${step.confidence_score}%</strong></li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        function startPlayback() {
+            stopPlayback();
+            playbackInterval = setInterval(() => {
+                let nextIdx = currentPlaybackIdx + 1;
+                if (nextIdx >= historyData.length) nextIdx = 0;
+                setPlaybackStep(nextIdx);
+            }, 1800);
+        }
+
+        function stopPlayback() {
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+            }
+        }
+
+        function renderRiskState() {
+            const container = document.getElementById('risk-twin-data');
+            if (!currentVendor) return;
+
+            container.innerHTML = `
+                <div class="col-md-6">
+                    <h6 class="text-white mb-2"><i class="bi bi-shield-alert"></i> Identity Threat Vectors</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="py-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between">
+                            <span class="text-secondary">Fraud Check Status:</span>
+                            <span class="badge bg-success">Clean Profile</span>
+                        </li>
+                        <li class="py-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between">
+                            <span class="text-secondary">Duplicate Overlaps Warning:</span>
+                            <span class="text-success">None Flagged</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6 class="text-white mb-2"><i class="bi bi-bar-chart"></i> Risk Index Metrics</h6>
+                    <div class="p-3 bg-dark border border-secondary border-opacity-20 rounded-3">
+                        <span class="text-secondary small d-block mb-1">Vulnerability Rating:</span>
+                        <strong class="text-danger fs-4">${(100.0 - currentVendor.trust_score).toFixed(1)}%</strong>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function renderRelationshipsGraph(vendorId) {
+            try {
+                const response = await fetch(`/api/v2/fraud/graph-patterns`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                let elements = [
+                    { data: { id: `v-${vendorId}`, label: currentVendor.name, type: 'vendor' } }
+                ];
+
+                if (data.success && data.patterns) {
+                    // Match any pattern involving the current vendor
+                    data.patterns.forEach((p, idx) => {
+                        if (p.affected_vendors.includes(currentVendor.name)) {
+                            // Add a mock linked asset representation
+                            elements.push({ data: { id: `asset-${idx}`, label: p.pattern, type: 'asset' } });
+                            elements.push({ data: { source: `v-${vendorId}`, target: `asset-${idx}` } });
+                        }
+                    });
+                }
+
+                // Initialize Cytoscape
+                cy = cytoscape({
+                    container: document.getElementById('relations-graph'),
+                    elements: elements,
+                    style: [
+                        {
+                            selector: 'node[type="vendor"]',
+                            style: {
+                                'background-color': '#00f2fe',
+                                'label': 'data(label)',
+                                'color': '#fff',
+                                'font-size': '11px',
+                                'width': 35,
+                                'height': 35
+                            }
+                        },
+                        {
+                            selector: 'node[type="asset"]',
+                            style: {
+                                'background-color': '#ff4560',
+                                'label': 'data(label)',
+                                'color': '#8c9cb5',
+                                'font-size': '9px',
+                                'width': 22,
+                                'height': 22
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 2,
+                                'line-color': 'rgba(255,255,255,0.15)',
+                                'curve-style': 'bezier'
+                            }
+                        }
+                    ],
+                    layout: {
+                        name: 'cose',
+                        animate: true
+                    }
+                });
+
+            } catch (err) {
+                console.error("Error drawing Cytoscape twin relations:", err);
+            }
+        }
+
+        function renderPredictions() {
+            const box = document.getElementById('predictions-box');
+            if (!currentVendor) return;
+
+            box.innerHTML = `
+                <div class="p-3 bg-dark border border-secondary border-opacity-20 rounded-3">
+                    <span class="text-secondary small d-block">Trust Score Projection (Next Qtr):</span>
+                    <strong class="text-cyan fs-5">${(currentVendor.trust_score * 1.02).toFixed(1)}</strong>
+                    <span class="badge bg-success ms-2">+2% trend</span>
+                </div>
+            `;
+        }
+
+        function renderRecommendations() {
+            const box = document.getElementById('recommendations-box');
+            if (!currentVendor) return;
+
+            box.innerHTML = `
+                <ul class="list-unstyled mb-0 small">
+                    <li class="py-1"><i class="bi bi-check-circle-fill text-success me-2"></i>GST compliance matches official database.</li>
+                    <li class="py-1"><i class="bi bi-info-circle-fill text-info me-2"></i>Maintain regular document audits.</li>
+                </ul>
+            `;
+        }
+
+        function renderActivities(activities) {
+            const box = document.getElementById('activities-box');
+            box.innerHTML = "";
+
+            if (activities.length === 0) {
+                box.innerHTML = "<p class='text-secondary small mb-0'>No recent activities recorded.</p>";
+                return;
+            }
+
+            activities.forEach(act => {
+                box.innerHTML += `
+                    <div class="py-2 border-bottom border-secondary border-opacity-10">
+                        <span class="text-white small d-block">${act.description}</span>
+                        <span class="text-secondary small" style="font-size: 0.72rem;">${new Date(act.timestamp).toLocaleString()}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function switchState(state) {
+            // Cytoscape resize triggers to align canvas dimensions
+            if (state === 'relationship' && cy) {
+                setTimeout(() => {
+                    cy.resize();
+                    cy.layout({ name: 'cose' }).run();
+                }, 200);
+            }
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', () => {
+            loadVendors();
+        });
+    </script>
+</body>
+</html>

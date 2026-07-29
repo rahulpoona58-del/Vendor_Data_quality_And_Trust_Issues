@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>System Audit Log Viewer</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #070a13;
+            --card-bg: rgba(18, 26, 47, 0.8);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-purple: #8e2de2;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.08) 0px, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(142, 45, 226, 0.08) 0px, transparent 40%);
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .header-title {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .stat-card {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+        }
+
+        .table-dark-custom {
+            background: transparent;
+            color: var(--text-main);
+        }
+
+        .table-dark-custom th {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .table-dark-custom td {
+            border-bottom: 1px solid var(--card-border);
+            vertical-align: middle;
+        }
+
+        .badge-module {
+            background: rgba(0, 242, 254, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .json-code {
+            background: #04060c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #70a1ff;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="container-fluid">
+        <!-- Top Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="header-title mb-1"><i class="bi bi-journal-text me-2"></i>System Audit Log Viewer</h2>
+                <p class="text-secondary mb-0">Immutable compliance journal tracking authentication, CRUD, approvals, & admin operations.</p>
+            </div>
+            <div>
+                <a href="/dashboard" class="btn btn-outline-light rounded-pill px-4"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="glass-card stat-card">
+                    <div class="text-secondary small mb-1">TOTAL AUDIT EVENTS</div>
+                    <div class="stat-val" id="stat-total">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-card stat-card">
+                    <div class="text-secondary small mb-1">AUTHENTICATION EVENTS</div>
+                    <div class="stat-val" id="stat-auth">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-card stat-card">
+                    <div class="text-secondary small mb-1">APPROVAL & WORKFLOWS</div>
+                    <div class="stat-val" id="stat-approvals">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-card stat-card">
+                    <div class="text-secondary small mb-1">INVESTIGATIONS & ADMIN</div>
+                    <div class="stat-val" id="stat-admin">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="glass-card p-3 mb-4">
+            <form id="filter-form" class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                        <input type="text" id="search-input" class="form-control bg-dark text-light border-secondary" placeholder="Search user email, action, reason...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="module-filter" class="form-select bg-dark text-light border-secondary">
+                        <option value="All">All Modules</option>
+                        <option value="Auth">Auth (Login/Logout)</option>
+                        <option value="Vendor">Vendor CRUD</option>
+                        <option value="Document">Document CRUD</option>
+                        <option value="Workflow">Workflow Approvals</option>
+                        <option value="Investigation">Investigations</option>
+                        <option value="Rules">Business Rules</option>
+                        <option value="Admin">Admin Actions</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="start-date" class="form-control bg-dark text-light border-secondary">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="end-date" class="form-control bg-dark text-light border-secondary">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-cyan text-dark fw-bold w-100 style-btn" style="background: var(--accent-cyan);"><i class="bi bi-funnel"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Audit Table Card -->
+        <div class="glass-card p-4">
+            <div class="table-responsive">
+                <table class="table table-dark-custom">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>Acting User</th>
+                            <th>Module</th>
+                            <th>Action Type</th>
+                            <th>IP Address</th>
+                            <th>Details / Reason</th>
+                            <th class="text-center">Action Diff</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-logs-body">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-secondary">Loading system audit records...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-secondary small" id="pagination-info">Showing logs...</div>
+                <div class="btn-group" id="pagination-controls">
+                    <!-- Dynamic Buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Diff Inspection Modal -->
+    <div class="modal fade" id="diffModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content glass-card text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="bi bi-file-diff me-2"></i>Audit Event Data Inspection</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-secondary small">PREVIOUS STATE (OLD VALUE)</h6>
+                            <pre id="modal-old-val" class="json-code">None</pre>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-secondary small">NEW STATE (NEW VALUE)</h6>
+                            <pre id="modal-new-val" class="json-code">None</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS & App Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        async function fetchAuditLogs(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('search-input').value;
+            const module = document.getElementById('module-filter').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            let url = `/api/v2/audit-logs?page=${page}&per_page=15`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (module && module !== 'All') url += `&module=${encodeURIComponent(module)}`;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+
+            try {
+                const response = await fetch(url);
+                if (response.status === 401 || response.status === 403) {
+                    document.getElementById('audit-logs-body').innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4"><i class="bi bi-shield-lock me-2"></i>Access Denied: Authentication & Auditor Privileges Required.</td></tr>`;
+                    return;
+                }
+                const data = await response.json();
+                renderTable(data.items || data.logs || [], data.pagination);
+                updateSummaryStats();
+            } catch (err) {
+                console.error("Error fetching audit logs:", err);
+            }
+        }
+
+        function renderTable(logs, pagination) {
+            const tbody = document.getElementById('audit-logs-body');
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">No audit logs matching search criteria.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td><code>#${log.id}</code></td>
+                    <td class="small text-secondary">${escapeHTML(log.created_at || log.timestamp)}</td>
+                    <td><i class="bi bi-person me-1 text-info"></i>${escapeHTML(log.performed_by)}</td>
+                    <td><span class="badge-module">${escapeHTML(log.module_name || 'System')}</span></td>
+                    <td class="fw-semibold">${escapeHTML(log.action_type)}</td>
+                    <td class="small text-secondary">${escapeHTML(log.ip_address || '127.0.0.1')}</td>
+                    <td class="small text-secondary">${escapeHTML(log.reason || log.description || 'System Log')}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-info rounded-pill" onclick="openDiffModal(${log.id})"><i class="bi bi-eye"></i> View</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (pagination) {
+                document.getElementById('pagination-info').innerText = `Showing page ${pagination.page} of ${pagination.pages} (${pagination.total} total logs)`;
+                renderPaginationControls(pagination);
+            }
+        }
+
+        function renderPaginationControls(p) {
+            const controls = document.getElementById('pagination-controls');
+            let html = '';
+            if (p.has_prev) html += `<button class="btn btn-sm btn-outline-secondary text-light" onclick="fetchAuditLogs(${p.page - 1})">Prev</button>`;
+            html += `<button class="btn btn-sm btn-cyan text-dark fw-bold" style="background: var(--accent-cyan);">${p.page}</button>`;
+            if (p.has_next) html += `<button class="btn btn-sm btn-outline-secondary text-light" onclick="fetchAuditLogs(${p.page + 1})">Next</button>`;
+            controls.innerHTML = html;
+        }
+
+        async function openDiffModal(logId) {
+            const response = await fetch(`/api/v2/audit-logs?page=1&per_page=100`);
+            const data = await response.json();
+            const logs = data.items || data.logs || [];
+            const target = logs.find(l => l.id === logId);
+
+            if (target) {
+                document.getElementById('modal-old-val').innerText = JSON.stringify(target.old_value || null, null, 2);
+                document.getElementById('modal-new-val').innerText = JSON.stringify(target.new_value || null, null, 2);
+                new bootstrap.Modal(document.getElementById('diffModal')).show();
+            }
+        }
+
+        async function updateSummaryStats() {
+            try {
+                const res = await fetch('/api/v2/audit-logs?page=1&per_page=500');
+                const data = await res.json();
+                const logs = data.items || data.logs || [];
+                
+                document.getElementById('stat-total').innerText = logs.length;
+                document.getElementById('stat-auth').innerText = logs.filter(l => l.module_name === 'Auth' || l.action_type.includes('Login')).length;
+                document.getElementById('stat-approvals').innerText = logs.filter(l => l.module_name === 'Workflow' || l.action_type.includes('Approve')).length;
+                document.getElementById('stat-admin').innerText = logs.filter(l => l.module_name === 'Admin' || l.module_name === 'Investigation' || l.module_name === 'Rules').length;
+            } catch (err) {}
+        }
+
+        document.getElementById('filter-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            fetchAuditLogs(1);
+        });
+
+        // Initial Load
+        fetchAuditLogs(1);
+    </script>
+</body>
+</html>

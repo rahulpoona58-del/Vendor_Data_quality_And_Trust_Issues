@@ -1,49 +1,2821 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Portal - {{ vendor.vendor_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-body {
-    background: linear-gradient(to right, #ff9a9e, #fad0c4);
-}
-.card {
-    border-radius: 15px;
-}
-</style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(142, 45, 226, 0.15) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(0, 242, 254, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .accent-text-glow {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .badge-trust {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            border-radius: 30px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            border: 2px dashed rgba(0, 242, 254, 0.4);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            background: rgba(0, 242, 254, 0.05);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+        }
+
+        .doc-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        .doc-table td {
+            vertical-align: middle;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-custom-cyan {
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            border: none;
+            color: white;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+        .btn-custom-cyan:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(0, 198, 255, 0.4);
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.4); }
+            50% { box-shadow: 0 0 15px rgba(220, 53, 69, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.4); }
+        }
+        .pulse-glow {
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        .role-pill {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .role-pill.active {
+            background: linear-gradient(45deg, var(--purple-glow), var(--cyan-glow));
+            color: white;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        }
+
+        .preview-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #cy-relationship-graph {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 <div class="container mt-5">
-
-    <div class="card shadow p-4">
-
-        <h2 class="text-center mb-4">Vendor Details</h2>
-
-        <p><b>ID:</b> {{ vendor.vendor_id }}</p>
-        <p><b>Name:</b> {{ vendor.vendor_name }}</p>
-
-        <p>Delivery: {{ vendor.on_time_delivery }}</p>
-        <p>Quality: {{ vendor.quality_rating }}</p>
-        <p>Defect: {{ vendor.defect_rate }}</p>
-        <p>Response: {{ vendor.response_time }}</p>
-
-        <h3 class="mt-3">Trust Score: {{ vendor.trust_score }}</h3>
-        <h4>
-            Trust Level:
-            <span class="badge 
-                {% if vendor.trust_level == 'High Trust' %}bg-success
-                {% elif vendor.trust_level == 'Medium Trust' %}bg-warning
-                {% else %}bg-danger{% endif %}">
-                {{ vendor.trust_level }}
-            </span>
-        </h4>
-
-        <a href="/" class="btn btn-secondary mt-3">Back</a>
-
+    <!-- Header Area / Role Simulation -->
+    <div class="glass-card p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center">
+            <span class="text-white me-3">🌐 System Access Center</span>
+            <div id="role-container" class="d-flex gap-2">
+                <span class="role-pill active" onclick="switchRole('admin@system.local', 'admin123', this)">Admin</span>
+                <span class="role-pill" onclick="switchRole('steward@system.local', 'steward123', this)">Data Steward</span>
+                <span class="role-pill" onclick="switchRole('auditor@system.local', 'auditor123', this)">Auditor</span>
+                <span class="role-pill" onclick="switchRole('manager@system.local', 'manager123', this)">Manager</span>
+                <span class="role-pill" onclick="switchRole('viewer@system.local', 'viewer123', this)">Viewer</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Centralized Notification Center Bell -->
+            <div class="position-relative">
+                <button class="btn btn-outline-info btn-sm position-relative" id="notif-bell-btn" onclick="toggleNotifDrawer()">
+                    🔔 Alert Inbox
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" id="notif-badge-count" style="display: none; font-size: 0.65rem;">
+                        0
+                    </span>
+                </button>
+                
+                <!-- Notification Drawer Dropdown -->
+                <div class="glass-card position-absolute end-0 mt-2 p-3 d-none" id="notif-drawer" style="width: 380px; z-index: 9999; max-height: 480px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-bold text-white small">🔔 Operational Notifications</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-xs btn-outline-info" style="font-size:0.65rem" onclick="markAllNotifsRead()">Mark All Read</button>
+                            <button class="btn btn-xs btn-outline-secondary" style="font-size:0.65rem" onclick="toggleArchiveView()">Toggle Unread/All</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search input inside notifications -->
+                    <input type="text" id="notif-search" class="form-control form-control-sm bg-dark text-white border-secondary mb-2" placeholder="Search inbox..." oninput="loadSystemNotifications()" style="font-size:0.75rem">
+                    
+                    <div id="notif-list-container" class="small text-secondary" style="max-height: 320px; overflow-y: auto;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            <a href="/" class="btn btn-outline-secondary btn-sm">⬅ Operations Board</a>
+        </div>
     </div>
 
+    <div class="row g-4">
+        <!-- Left: Vendor Metrics (Preserving original attributes) -->
+        <div class="col-lg-4">
+            <div class="glass-card p-4 h-100">
+                <h3 class="mb-4 accent-text-glow font-weight-bold">Vendor Profile</h3>
+                
+                <div class="mb-3">
+                    <label class="text-secondary small d-block">Vendor ID</label>
+                    <span class="fs-5 fw-bold text-white">{{ vendor.vendor_id }}</span>
+                </div>
+                <div class="mb-3">
+                    <label class="text-secondary small d-block">Business Name</label>
+                    <span class="fs-5 fw-bold text-white">{{ vendor.vendor_name }}</span>
+                </div>
+                
+                <hr style="border-color: rgba(255,255,255,0.1)">
+                
+                <h5 class="text-white mt-4 mb-3">Performance Telemetry</h5>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-10">
+                    <span class="text-secondary">On-time Delivery:</span>
+                    <span class="text-white fw-bold">{{ vendor.on_time_delivery }}%</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-10">
+                    <span class="text-secondary">Quality Rating:</span>
+                    <span class="text-white fw-bold">{{ vendor.quality_rating }} / 5.0</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-10">
+                    <span class="text-secondary">Defect Rate:</span>
+                    <span class="text-white fw-bold">{{ vendor.defect_rate }}%</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 mb-4">
+                    <span class="text-secondary">Response Time:</span>
+                    <span class="text-white fw-bold">{{ vendor.response_time }} hrs</span>
+                </div>
+                
+                <div class="glass-card p-3 text-center" style="background: rgba(255, 255, 255, 0.02);">
+                    <span class="text-secondary small d-block mb-1">Calculated Trust Level</span>
+                    <span class="badge-trust 
+                        {% if vendor.trust_level == 'High Trust' %}bg-success
+                        {% elif vendor.trust_level == 'Medium Trust' %}bg-warning
+                        {% else %}bg-danger{% endif %} d-inline-block mt-2">
+                        {{ vendor.trust_level }} ({{ vendor.trust_score }} Pts)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Approval Workflow Control Center -->
+            <div class="glass-card p-4 mt-4">
+                <h4 class="accent-text-glow font-weight-bold mb-3"><i class="bi bi-diagram-3"></i> Approval Workflow</h4>
+                
+                <div class="p-3 rounded mb-3" style="background: rgba(0, 0, 0, 0.2);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">STAGE</span>
+                        <span class="badge" id="wf-badge-stage" style="font-size: 0.85rem;">--</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">REQUIRED LEVEL</span>
+                        <span class="text-white fw-bold" id="wf-val-level">--</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small">ASSIGNED ROLE</span>
+                        <span class="text-cyan fw-bold" id="wf-val-role">--</span>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="mb-3" id="wf-controls" style="display: none;">
+                    <label class="text-secondary small d-block mb-1">COMMENTS / EXPLANATION</label>
+                    <textarea class="form-control bg-dark border-secondary text-white mb-3" id="wf-comment" rows="2" placeholder="Provide context for your action..."></textarea>
+                    
+                    <div class="d-flex flex-wrap gap-2" id="wf-actions-buttons">
+                        <!-- Populated dynamically based on role & stage -->
+                    </div>
+                </div>
+                
+                <div class="text-secondary text-center small py-2" id="wf-not-auth" style="display: none;">
+                    <i class="bi bi-lock-fill"></i> Access restricted. Current action requires: <strong class="text-cyan" id="wf-not-auth-role">--</strong>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.05)">
+                
+                <!-- History Log Toggle -->
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" onclick="toggleWfHistory()" style="user-select: none;">
+                    <span class="text-white small fw-bold"><i class="bi bi-clock-history"></i> TRANSITION LOGS</span>
+                    <i class="bi bi-chevron-down text-secondary" id="wf-history-chevron"></i>
+                </div>
+                
+                <div class="mt-3" id="wf-history-log" style="display: none; max-height: 200px; overflow-y: auto; padding-right: 5px;">
+                    <div class="d-flex flex-column gap-2" id="wf-history-rows">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Enterprise Document Manager -->
+        <div class="col-lg-8">
+            <!-- AI Recommendation Engine -->
+            <div class="glass-card p-4 mb-4" id="ai-recommendations-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">🤖 AI Recommendation Engine</h3>
+                    <span class="text-secondary small fw-bold">1-CLICK OVERRIDES</span>
+                </div>
+                
+                <div id="ai-recs-container" class="d-flex flex-column gap-3" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Trust Intelligence Operations Center -->
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">🛡️ Trust & Risk intelligence Center</h3>
+                    <button class="btn btn-sm btn-custom-cyan" onclick="recalculateTrustScore()">⚡ Recalculate Model</button>
+                </div>
+                
+                <div class="row g-4">
+                    <!-- Left: Subscores progress bars -->
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(0,0,0,0.15);">
+                            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                <span class="text-secondary small">OVERALL TRUST INDEX</span>
+                                <span class="fs-4 fw-bold text-info" id="trust-gauge-score">-- / 100</span>
+                            </div>
+                            
+                            <!-- Subscores -->
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small text-secondary">
+                                    <span>Reliability Index</span>
+                                    <span id="score-val-reliability">--%</span>
+                                </div>
+                                <div class="progress bg-dark" style="height: 6px;">
+                                    <div class="progress-bar bg-info" id="score-bar-reliability" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small text-secondary">
+                                    <span>Compliance Rate</span>
+                                    <span id="score-val-compliance">--%</span>
+                                </div>
+                                <div class="progress bg-dark" style="height: 6px;">
+                                    <div class="progress-bar bg-success" id="score-bar-compliance" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small text-secondary">
+                                    <span>Confidence Level</span>
+                                    <span id="score-val-confidence">--%</span>
+                                </div>
+                                <div class="progress bg-dark" style="height: 6px;">
+                                    <div class="progress-bar bg-primary" id="score-bar-confidence" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small text-secondary">
+                                    <span>Risk Vulnerability</span>
+                                    <span id="score-val-risk">--%</span>
+                                </div>
+                                <div class="progress bg-dark" style="height: 6px;">
+                                    <div class="progress-bar bg-danger" id="score-bar-risk" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Positive and Negative Reasons List -->
+                    <div class="col-md-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-2">MODEL EXPLANATION REASONS</span>
+                            <div id="trust-reasons-list" class="small" style="max-height: 150px; overflow-y: auto;">
+                                <span class="text-secondary">Scan has not been run. Trigger recalculation.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations panel -->
+                <div class="mt-3 d-none" id="trust-recs-panel">
+                    <span class="text-secondary small d-block mb-1">REMEDIATION RECOMMENDATIONS</span>
+                    <div class="alert alert-warning py-2 px-3 small border-0 bg-warning bg-opacity-10 text-warning" id="trust-recs-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- History log -->
+                <div class="mt-3">
+                    <span class="text-secondary small d-block mb-2">SCORE HISTORY LOG</span>
+                    <div class="table-responsive" style="max-height: 120px; overflow-y: auto;">
+                        <table class="table table-sm text-white" style="font-size:0.75rem; border-color:rgba(255,255,255,0.05);">
+                            <thead>
+                                <tr class="text-secondary">
+                                    <th>Run Time</th>
+                                    <th>Trust Score</th>
+                                    <th>Reliability</th>
+                                    <th>Compliance</th>
+                                    <th>Vulnerability</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trust-history-rows">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Fraud Detection Dashboard -->
+            <div class="glass-card p-4 mb-4" id="fraud-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">🚨 AI Fraud Detection & Alerts</h3>
+                    <button class="btn btn-sm btn-custom-cyan" onclick="runFraudScan()">🔍 Run Fraud Audit</button>
+                </div>
+
+                <div class="p-3 rounded mb-3" id="fraud-alert-banner" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-secondary small d-block">OVERALL FRAUD RISK INDEX</span>
+                            <span class="fs-4 fw-bold text-white" id="fraud-score-label">-- / 100</span>
+                            <span class="badge ms-2 bg-secondary" id="fraud-risk-badge" style="vertical-align: middle;">No Scan</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-secondary small d-block">INVESTIGATION STATUS</span>
+                            <span class="badge bg-secondary" id="fraud-status-badge">No Scan</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div class="row g-3 d-none" id="fraud-details-box">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-1">FRAUD ROOT CAUSE</span>
+                            <p class="text-white small fw-bold" id="fraud-root-cause">--</p>
+                            
+                            <span class="text-secondary small d-block mb-1 mt-3">RECOMMENDED MITIGATION ACTION</span>
+                            <p class="text-warning small fw-bold" id="fraud-recs">--</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-2">SUPPORTING AUDIT EVIDENCE</span>
+                            <div class="small text-secondary" id="fraud-evidence" style="max-height: 120px; overflow-y: auto;">
+                                <!-- Evidence keys list -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Action Control -->
+                <div class="mt-3 d-none text-end" id="fraud-action-controls">
+                    <span class="text-secondary small me-2" style="vertical-align: middle;">Mark Investigation Status:</span>
+                    <button class="btn btn-sm btn-outline-warning me-1" onclick="resolveFraudAlert('Investigating')">Investigate</button>
+                    <button class="btn btn-sm btn-success" onclick="resolveFraudAlert('Cleared')">Clear Alert</button>
+                </div>
+            </div>
+            <!-- Enterprise Compliance & Audit Center -->
+            <div class="glass-card p-4 mb-4" id="compliance-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">📋 Compliance & Audit Center</h3>
+                    <button class="btn btn-sm btn-custom-cyan" onclick="runComplianceScan()">🔍 Audit Compliance</button>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left: Score, Approval, Auditing Override -->
+                    <div class="col-md-6">
+                        <div class="p-3 rounded mb-3" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-1">COMPLIANCE SCORE</span>
+                            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                <span class="fs-4 fw-bold text-white" id="compliance-score-val">--%</span>
+                                <span class="badge" id="compliance-approval-badge">No Scan</span>
+                            </div>
+                            <div class="progress bg-dark" style="height: 8px;">
+                                <div class="progress-bar bg-success" id="compliance-score-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Auditor Approval Override -->
+                        <div class="p-3 rounded d-none" id="compliance-override-box" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-2">AUDITOR APPROVAL WORKFLOW</span>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-sm btn-success" onclick="overrideStatus('Approved')">Approve</button>
+                                <button type="button" class="btn btn-sm btn-warning text-dark" onclick="overrideStatus('Pending Approval')">Pending</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="overrideStatus('Suspended')">Suspend</button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="overrideStatus('Rejected')">Reject</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Expiry Notifications & Alert reminders -->
+                    <div class="col-md-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <span class="text-secondary small d-block mb-2">EXPIRY NOTIFICATIONS & ALERTS</span>
+                            <div id="compliance-notifications-box" class="small" style="max-height: 150px; overflow-y: auto;">
+                                <span class="text-secondary">No active alerts recorded. Run compliance scan.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Checklist Table -->
+                <div class="mt-4">
+                    <span class="text-secondary small d-block mb-2">DOCUMENT COMPLIANCE CHECKLIST</span>
+                    <div class="table-responsive">
+                        <table class="table table-sm text-white doc-table" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr class="text-secondary">
+                                    <th>Required Requirement</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Weighted Points</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compliance-checklist-rows">
+                                <tr><td colspan="3" class="text-center text-secondary py-3">Initialize scan to check documents status</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Compliance Timeline Log -->
+                <div class="mt-3">
+                    <span class="text-secondary small d-block mb-2">COMPLIANCE TIMELINE LOG</span>
+                    <div class="table-responsive" style="max-height: 120px; overflow-y: auto;">
+                        <table class="table table-sm text-white" style="font-size:0.75rem; border-color:rgba(255,255,255,0.05);">
+                            <thead>
+                                <tr class="text-secondary">
+                                    <th>Audit Time</th>
+                                    <th>Score</th>
+                                    <th>Status</th>
+                                    <th>Log Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compliance-timeline-rows">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendor Relationship Graph -->
+            <div class="glass-card p-4 mb-4" id="relationship-graph-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">🕸️ Vendor Relationship Graph</h3>
+                    <div>
+                        <button class="btn btn-sm btn-custom-cyan" onclick="resetGraphView()">🔄 Reset View</button>
+                    </div>
+                </div>
+
+                <!-- Controls: Filter & Search -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-7">
+                        <div class="d-flex flex-wrap gap-2 pt-1">
+                            <div class="form-check form-check-inline small">
+                                <input class="form-check-input" type="checkbox" id="filter-invoices" checked onchange="applyGraphFilters()">
+                                <label class="form-check-input-label text-secondary small" for="filter-invoices">Invoices</label>
+                            </div>
+                            <div class="form-check form-check-inline small">
+                                <input class="form-check-input" type="checkbox" id="filter-pos" checked onchange="applyGraphFilters()">
+                                <label class="form-check-input-label text-secondary small" for="filter-pos">POs</label>
+                            </div>
+                            <div class="form-check form-check-inline small">
+                                <input class="form-check-input" type="checkbox" id="filter-employees" checked onchange="applyGraphFilters()">
+                                <label class="form-check-input-label text-secondary small" for="filter-employees">Employees</label>
+                            </div>
+                            <div class="form-check form-check-inline small">
+                                <input class="form-check-input" type="checkbox" id="filter-fraud-only" onchange="applyGraphFilters()">
+                                <label class="form-check-input-label text-warning small fw-bold" for="filter-fraud-only">⚠️ Fraud Risks Only</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" id="graph-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="🔍 Search nodes..." oninput="highlightGraphNode()">
+                    </div>
+                </div>
+
+                <!-- Cytoscape Canvas -->
+                <div id="cy-relationship-graph"></div>
+
+                <!-- Legend -->
+                <div class="d-flex flex-wrap justify-content-center gap-3 mt-3 small text-secondary">
+                    <div><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background-color: #00c6ff;"></span>Central Vendor</div>
+                    <div><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background-color: #ff9f43;"></span>Duplicate Vendor</div>
+                    <div><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background-color: #ee5253;"></span>Shared Asset (Risk)</div>
+                    <div><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background-color: #8c9cb5;"></span>Operational Entity</div>
+                    <div><span class="d-inline-block me-1" style="width: 12px; height: 2px; background-color: #ee5253;"></span>Suspicious Link</div>
+                </div>
+            </div>
+            <!-- Vendor Activity Audit Trail Timeline -->
+            <div class="glass-card p-4 mb-4" id="activity-timeline-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="accent-text-glow font-weight-bold mb-0">📅 Vendor Activity Audit Timeline</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-info" onclick="exportTimeline('json')">📥 Export JSON</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="exportTimeline('csv')">📥 Export CSV</button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <input type="text" id="timeline-search" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="🔍 Search description or author..." oninput="loadTimelineEvents()">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="timeline-start-date" class="form-control form-control-sm bg-dark text-white border-secondary" onchange="loadTimelineEvents()">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="timeline-end-date" class="form-control form-control-sm bg-dark text-white border-secondary" onchange="loadTimelineEvents()">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-sm btn-custom-cyan w-100" onclick="clearTimelineFilters()">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Timeline Listing -->
+                <div class="timeline-trail-container" style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                    <div id="timeline-events-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-4">
+                <h3 class="mb-4 accent-text-glow font-weight-bold">Enterprise Document Manager</h3>
+                
+                <!-- Document Ingestion Form (Visible to upload roles) -->
+                <div class="upload-section mb-4" id="upload-panel">
+                    <div class="drop-zone" id="drop-zone-el">
+                        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-info mb-3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="text-white mb-1">Drag and drop file here, or click to choose</p>
+                        <span class="text-secondary small">PDF, PNG, JPG, DOCX, XLSX (Max 10MB)</span>
+                        <input type="file" id="file-input" style="display:none">
+                    </div>
+                    
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Document Classification</label>
+                            <select id="doc-type-input" class="form-select bg-dark text-white border-secondary">
+                                <option value="GST Certificate">GST Certificate</option>
+                                <option value="PAN Card">PAN Card</option>
+                                <option value="Company Registration Certificate">Company Registration Certificate</option>
+                                <option value="Bank Proof">Bank Proof</option>
+                                <option value="Purchase Orders">Purchase Orders</option>
+                                <option value="Invoices">Invoices</option>
+                                <option value="Contracts">Contracts</option>
+                                <option value="Other Supporting Documents">Other Supporting Documents</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Expiry Date (Optional)</label>
+                            <input type="date" id="expiry-date-input" class="form-control bg-dark text-white border-secondary">
+                        </div>
+                        <div class="col-12 text-end">
+                            <button class="btn btn-custom-cyan px-4 py-2" onclick="handleUpload()">Upload Document</button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress mt-3 bg-dark d-none" id="upload-progress-container" style="height: 10px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar" id="upload-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1)">
+
+                <!-- Document List Section -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-white mb-0">Registry Logs</h5>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="doc-search" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search logs..." onkeyup="filterDocs()">
+                        <select id="doc-filter" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="filterDocs()">
+                            <option value="">All Categories</option>
+                            <option value="GST Certificate">GST</option>
+                            <option value="PAN Card">PAN</option>
+                            <option value="Contracts">Contracts</option>
+                            <option value="Invoices">Invoices</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table doc-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Version</th>
+                                <th>Status</th>
+                                <th>Uploaded By</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="document-rows">
+                            <!-- Populated dynamically via javascript API calls -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="mt-4">
+                    <h6 class="text-white mb-3">Document Preview Panel</h6>
+                    <div class="preview-panel" id="preview-panel-el">
+                        <span class="text-secondary">No document selected for preview.</span>
+                    </div>
+                </div>
+
+                <!-- AI Data Cleansing Card -->
+                <div class="glass-card p-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="text-white mb-0 font-weight-bold">✨ AI Data Cleansing Center</h4>
+                        <div>
+                            <button class="btn btn-sm btn-custom-cyan me-1" onclick="runCleaningScan()">🔍 Scan Profiles</button>
+                            <button class="btn btn-sm btn-outline-success" id="bulk-apply-btn" onclick="bulkApplySuggestions()">⚡ Bulk Apply</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table doc-table">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Original</th>
+                                    <th>Correction</th>
+                                    <th>Confidence</th>
+                                    <th>Reasoning</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cleansing-rows">
+                                <tr><td colspan="6" class="text-center text-secondary py-3">Click 'Scan Profiles' to check for formatting errors</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    const VENDOR_ID = {{ vendor.vendor_id }};
+    let token = "";
+
+    // 1. Initial Load and Autologin as Admin
+    window.addEventListener('load', async () => {
+        setupDragAndDrop();
+        await autoLogin('admin@system.local', 'admin123');
+        loadDocuments();
+        loadWorkflowState();
+    });
+
+    // 2. Mock Role Switcher (registers/logs in automatically in the background)
+    async function autoLogin(email, password) {
+        try {
+            // First, trigger a register call to ensure the user exists
+            await fetch('/api/v2/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, role: email.split('@')[0] === 'admin' ? 'Admin' : (email.split('@')[0] === 'steward' ? 'Data Steward' : (email.split('@')[0] === 'auditor' ? 'Auditor' : 'Viewer')) })
+            });
+
+            // Trigger login
+            const response = await fetch('/api/v2/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                token = data.token;
+                localStorage.setItem('auth_token', token);
+                localStorage.setItem('current_role', data.user.role);
+                toggleUploadPanel(data.user.role);
+            }
+        } catch (err) {
+            console.error("Auth simulation failed:", err);
+        }
+    }
+
+    async function switchRole(email, password, element) {
+        document.querySelectorAll('.role-pill').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        await autoLogin(email, password);
+        loadDocuments();
+        loadWorkflowState();
+        if (!document.getElementById('notif-drawer').classList.contains('d-none')) {
+            loadSystemNotifications();
+        }
+    }
+
+    // --- Approval Workflow Engine Integration ---
+    let currentWf = null;
+
+    async function loadWorkflowState() {
+        try {
+            const response = await fetch(`/api/v2/workflow/${VENDOR_ID}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                currentWf = data.workflow;
+                renderWorkflowUI();
+            }
+        } catch (err) {
+            console.error("Error loading workflow state:", err);
+        }
+    }
+
+    function renderWorkflowUI() {
+        if (!currentWf) return;
+
+        const badge = document.getElementById('wf-badge-stage');
+        badge.innerText = currentWf.current_stage.toUpperCase();
+        
+        badge.className = "badge ";
+        if (currentWf.current_stage === 'Approved') badge.classList.add('bg-success');
+        else if (currentWf.current_stage === 'Rejected') badge.classList.add('bg-danger');
+        else if (currentWf.current_stage === 'Submitted') badge.classList.add('bg-primary');
+        else if (currentWf.current_stage === 'Under Review') badge.classList.add('bg-warning', 'text-dark');
+        else if (currentWf.current_stage === 'Archived') badge.classList.add('bg-secondary');
+        else badge.classList.add('bg-dark', 'text-secondary', 'border', 'border-secondary');
+
+        document.getElementById('wf-val-level').innerText = `Level ${currentWf.required_level}`;
+        document.getElementById('wf-val-role').innerText = currentWf.assigned_role;
+
+        let activeRole = 'Viewer';
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            const claims = JSON.parse(jsonPayload);
+            activeRole = claims.role || 'Viewer';
+        } catch(e) {}
+
+        const controlsDiv = document.getElementById('wf-controls');
+        const notAuthDiv = document.getElementById('wf-not-auth');
+        const actionButtons = document.getElementById('wf-actions-buttons');
+        
+        controlsDiv.style.display = 'none';
+        notAuthDiv.style.display = 'none';
+        actionButtons.innerHTML = "";
+
+        const stage = currentWf.current_stage;
+        const assigned = currentWf.assigned_role;
+
+        let isAuthorizedActor = (activeRole === 'Admin') || (activeRole === assigned);
+
+        if (stage === 'Approved' || stage === 'Archived') {
+            controlsDiv.style.display = 'none';
+            notAuthDiv.style.display = 'none';
+        } else {
+            if (isAuthorizedActor) {
+                controlsDiv.style.display = 'block';
+                
+                if (stage === 'Draft' || stage === 'Rejected') {
+                    actionButtons.innerHTML += `<button class="btn btn-sm btn-primary" onclick="submitWfAction('Submit')"><i class="bi bi-send"></i> Submit Profile</button>`;
+                } else if (stage === 'Submitted') {
+                    actionButtons.innerHTML += `<button class="btn btn-sm btn-warning text-dark" onclick="submitWfAction('StartReview')"><i class="bi bi-play-fill"></i> Start Review</button>`;
+                } else if (stage === 'Under Review') {
+                    const levelText = currentWf.required_level === 1 ? 'L1 Approval' : 'Final Approval';
+                    actionButtons.innerHTML += `
+                        <button class="btn btn-sm btn-success" onclick="submitWfAction('Approve')"><i class="bi bi-check-circle"></i> Approve (${levelText})</button>
+                        <button class="btn btn-sm btn-danger" onclick="submitWfAction('Reject')"><i class="bi bi-x-circle"></i> Reject</button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="submitWfAction('Escalate')"><i class="bi bi-arrow-up-circle"></i> Escalate</button>
+                    `;
+                }
+                if (activeRole === 'Admin' || activeRole === 'Manager') {
+                    actionButtons.innerHTML += `<button class="btn btn-sm btn-outline-secondary" onclick="submitWfAction('Archive')"><i class="bi bi-archive"></i> Archive</button>`;
+                }
+            } else {
+                notAuthDiv.style.display = 'block';
+                document.getElementById('wf-not-auth-role').innerText = assigned;
+            }
+        }
+
+        const histRows = document.getElementById('wf-history-rows');
+        histRows.innerHTML = "";
+        if (currentWf.histories && currentWf.histories.length > 0) {
+            [...currentWf.histories].reverse().forEach(h => {
+                const dateStr = new Date(h.timestamp).toLocaleString();
+                histRows.innerHTML += `
+                    <div class="p-2 rounded border border-secondary border-opacity-10 mb-1" style="background: rgba(255,255,255,0.01); font-size: 0.8rem;">
+                        <div class="d-flex justify-content-between text-secondary mb-1">
+                            <span><strong>${h.actor_name}</strong> (${h.actor_role})</span>
+                            <span>${dateStr}</span>
+                        </div>
+                        <div class="text-white mb-1">
+                            <span class="badge bg-secondary py-1 px-2">${h.action}</span> 
+                            <span class="text-secondary small">from</span> <code>${h.from_stage}</code> 
+                            <span class="text-secondary small">to</span> <code>${h.to_stage}</code>
+                        </div>
+                        ${h.comment ? `<div class="text-secondary" style="font-style: italic;">"${h.comment}"</div>` : ''}
+                    </div>
+                `;
+            });
+        } else {
+            histRows.innerHTML = `<div class="text-secondary text-center small py-3">No history logs recorded.</div>`;
+        }
+    }
+
+    async function submitWfAction(action) {
+        const comment = document.getElementById('wf-comment').value;
+        try {
+            const response = await fetch(`/api/v2/workflow/${VENDOR_ID}/action`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ action: action, comment: comment })
+            });
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('wf-comment').value = "";
+                loadWorkflowState();
+            } else {
+                alert(data.message || "Failed to execute workflow action.");
+            }
+        } catch (err) {
+            console.error("Error executing workflow action:", err);
+        }
+    }
+
+    function toggleWfHistory() {
+        const logDiv = document.getElementById('wf-history-log');
+        const chevron = document.getElementById('wf-history-chevron');
+        if (logDiv.style.display === 'none') {
+            logDiv.style.display = 'block';
+            chevron.className = "bi bi-chevron-up text-secondary";
+        } else {
+            logDiv.style.display = 'none';
+            chevron.className = "bi bi-chevron-down text-secondary";
+        }
+    }
+
+    function toggleUploadPanel(role) {
+        const panel = document.getElementById('upload-panel');
+        // Only Admin, Data Steward, and Manager can upload
+        if (['Admin', 'Data Steward', 'Manager'].includes(role)) {
+            panel.classList.remove('d-none');
+        } else {
+            panel.classList.add('d-none');
+        }
+    }
+
+    // 3. API Integrations: Load Document List
+    async function loadDocuments() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/documents`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('document-rows');
+            tbody.innerHTML = "";
+
+            if (!data.documents || data.documents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">No active documents on file</td></tr>`;
+                return;
+            }
+
+            data.documents.forEach(doc => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-name', doc.name.toLowerCase());
+                tr.setAttribute('data-type', doc.document_type);
+
+                let badgeClass = 'bg-warning';
+                if (doc.verification_status === 'Verified') badgeClass = 'bg-success';
+                if (doc.verification_status === 'Rejected') badgeClass = 'bg-danger';
+
+                const role = localStorage.getItem('current_role');
+                const canDelete = ['Admin', 'Data Steward'].includes(role);
+                const canVerify = ['Admin', 'Auditor'].includes(role);
+
+                tr.innerHTML = `
+                    <td>
+                        <a href="#" class="text-info text-decoration-none" onclick="previewDoc('${doc.id}', '${doc.name}', '${doc.mime_type}')">${doc.name}</a>
+                        <div class="small text-secondary" style="font-size:0.75rem">${(doc.file_size / 1024).toFixed(1)} KB | Hash: ${doc.file_hash.substring(0,8)}...</div>
+                    </td>
+                    <td><span class="badge bg-secondary">${doc.document_type}</span></td>
+                    <td>v${doc.version}</td>
+                    <td>
+                        <span class="badge ${badgeClass}">${doc.verification_status}</span>
+                        ${canVerify && doc.verification_status === 'Pending' ? `
+                            <div class="mt-1">
+                                <button class="btn btn-xs btn-success py-0 px-1" style="font-size:0.7rem" onclick="verifyDoc('${doc.id}', 'Verified')">Approve</button>
+                                <button class="btn btn-xs btn-danger py-0 px-1" style="font-size:0.7rem" onclick="verifyDoc('${doc.id}', 'Rejected')">Reject</button>
+                            </div>
+                        ` : ''}
+                    </td>
+                    <td class="small text-secondary">${doc.uploaded_by}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="runOcrForDoc('${doc.id}')" title="Scan Document Intelligence">🔍</button>
+                        <a href="/api/v2/documents/${doc.id}/download" class="btn btn-sm btn-outline-info me-1" target="_blank">📥</a>
+                        ${canDelete ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteDoc('${doc.id}')">🗑</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error("Error loading document list:", err);
+        }
+    }
+
+    // 4. API Integrations: Upload File
+    function setupDragAndDrop() {
+        const dropZone = document.getElementById('drop-zone-el');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                dropZone.querySelector('p').innerText = fileInput.files[0].name;
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                dropZone.querySelector('p').innerText = fileInput.files[0].name;
+            }
+        });
+    }
+
+    async function handleUpload() {
+        const fileInput = document.getElementById('file-input');
+        const docType = document.getElementById('doc-type-input').value;
+        const expiryDate = document.getElementById('expiry-date-input').value;
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress');
+
+        if (fileInput.files.length === 0) {
+            alert("Please select a file to upload");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('document_type', docType);
+        if (expiryDate) formData.append('expiry_date', expiryDate);
+
+        progressContainer.classList.remove('d-none');
+        progressBar.style.width = '20%';
+
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/documents`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            progressBar.style.width = '70%';
+            const data = await response.json();
+            progressBar.style.width = '100%';
+
+            setTimeout(() => {
+                progressContainer.classList.add('d-none');
+                progressBar.style.width = '0%';
+            }, 1000);
+
+            if (data.success) {
+                // Reset form fields
+                fileInput.value = "";
+                document.getElementById('drop-zone-el').querySelector('p').innerText = "Drag and drop file here, or click to choose";
+                loadDocuments();
+            } else {
+                alert(`Upload failed: ${data.message}`);
+            }
+        } catch (err) {
+            progressContainer.classList.add('d-none');
+            alert(`Network error during upload: ${err}`);
+        }
+    }
+
+    // 5. API Integrations: Actions
+    async function deleteDoc(docId) {
+        if (!confirm("Are you sure you want to delete this document?")) return;
+        try {
+            const response = await fetch(`/api/v2/documents/${docId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadDocuments();
+            } else {
+                alert(`Delete failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error deleting doc:", err);
+        }
+    }
+
+    async function verifyDoc(docId, status) {
+        try {
+            const response = await fetch(`/api/v2/documents/${docId}/verify`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadDocuments();
+            } else {
+                alert(`Verification update failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error verifying doc:", err);
+        }
+    }
+
+    // 6. Preview Panel Renderer
+    function previewDoc(id, name, mimeType) {
+        const previewPanel = document.getElementById('preview-panel-el');
+        previewPanel.innerHTML = "";
+
+        if (mimeType.startsWith('image/')) {
+            previewPanel.innerHTML = `
+                <img src="/api/v2/documents/${id}/download" style="max-width:100%; max-height:300px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.5)">
+                <span class="text-white mt-2 font-weight-bold">${name}</span>
+            `;
+        } else {
+            previewPanel.innerHTML = `
+                <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-secondary mb-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="text-white font-weight-bold">${name}</span>
+                <span class="text-secondary small mt-1">Mime-Type: ${mimeType}</span>
+                <span class="text-warning small mt-2">Preview not available for this file type. Click Download action.</span>
+            `;
+        }
+    }
+
+    // 7. Search & Filters
+    function filterDocs() {
+        const searchInput = document.getElementById('doc-search').value.toLowerCase();
+        const filterSelect = document.getElementById('doc-filter').value;
+        const rows = document.querySelectorAll('#document-rows tr');
+
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name');
+            const type = row.getAttribute('data-type');
+
+            if (!name) return; // Skip empty state rows
+
+            const matchesSearch = name.includes(searchInput);
+            const matchesFilter = filterSelect === "" || type === filterSelect;
+
+            row.style.display = (matchesSearch && matchesFilter) ? "" : "none";
+        });
+    }
+
+    // 8. OCR / Document Intelligence functions
+    async function runOcrForDoc(docId) {
+        const previewPanel = document.getElementById('preview-panel-el');
+        previewPanel.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="text-secondary mt-2">Executing Document Intelligence Scan...</div>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`/api/v2/documents/${docId}/ocr`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                renderOcrResult(data.ocr_result);
+            } else {
+                previewPanel.innerHTML = `<span class="text-danger">OCR execution failed: ${data.message}</span>`;
+            }
+        } catch (err) {
+            previewPanel.innerHTML = `<span class="text-danger">Network error during OCR: ${err}</span>`;
+        }
+    }
+
+    function renderOcrResult(ocr) {
+        const previewPanel = document.getElementById('preview-panel-el');
+        previewPanel.innerHTML = "";
+        
+        const fields = [
+            { key: 'vendor_name', label: 'Vendor Name' },
+            { key: 'gst_number', label: 'GST Number' },
+            { key: 'pan_number', label: 'PAN Card Number' },
+            { key: 'address', label: 'Address Check' },
+            { key: 'email', label: 'Contact Email' },
+            { key: 'phone', label: 'Phone Line' },
+            { key: 'bank_account', label: 'Bank Account' },
+            { key: 'ifsc', label: 'IFSC Code' },
+            { key: 'cin', label: 'CIN Number' },
+            { key: 'dates', label: 'Doc Expiry Date' }
+        ];
+
+        const isEditable = ['Admin', 'Data Steward'].includes(localStorage.getItem('current_role'));
+        
+        let html = `
+            <div class="w-100 p-2 text-start">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 border-secondary border-opacity-20">
+                    <span class="text-white fw-bold">🔍 Intelligence Scan Results</span>
+                    <span class="badge ${ocr.status === 'Verified' ? 'bg-success' : (ocr.status === 'Corrected' ? 'bg-info' : 'bg-warning')}">${ocr.status}</span>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-sm text-white" style="font-size: 0.85rem; border-color: rgba(255,255,255,0.05);">
+                        <thead>
+                            <tr class="text-secondary">
+                                <th>Field Property</th>
+                                <th>Extracted Value</th>
+                                <th>Confidence</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        
+        const currentData = ocr.corrected_data || ocr.extracted_data;
+
+        fields.forEach(field => {
+            const val = currentData[field.key] || '';
+            const confidence = ocr.confidence_scores[field.key] || 0;
+            const isMatch = ocr.comparison_results[field.key] !== false;
+            
+            let confidenceClass = 'text-danger';
+            if (confidence >= 0.90) confidenceClass = 'text-success';
+            else if (confidence >= 0.70) confidenceClass = 'text-warning';
+            
+            let matchHtml = isMatch 
+                ? '<span class="badge bg-success bg-opacity-70 text-white">Match</span>' 
+                : '<span class="badge bg-danger bg-opacity-70 text-white">Mismatch</span>';
+                
+            let inputHtml = isEditable 
+                ? `<input type="text" class="form-control form-control-sm bg-dark text-white border-secondary ocr-input" data-key="${field.key}" value="${val}">` 
+                : `<span class="fw-bold">${val || '-'}</span>`;
+
+            html += `
+                <tr ${!isMatch ? 'style="background: rgba(220, 53, 69, 0.05);"' : ''}>
+                    <td class="text-secondary">${field.label}</td>
+                    <td>${inputHtml}</td>
+                    <td class="${confidenceClass} fw-bold">${(confidence * 100).toFixed(0)}%</td>
+                    <td class="text-end">${matchHtml}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+                ${isEditable ? `
+                    <div class="text-end mt-2">
+                        <button class="btn btn-sm btn-custom-cyan" onclick="saveOcrCorrections('${ocr.id}')">Save & Apply Corrections</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        previewPanel.innerHTML = html;
+    }
+
+    async function saveOcrCorrections(ocrId) {
+        const inputs = document.querySelectorAll('.ocr-input');
+        const corrected_data = {};
+        inputs.forEach(input => {
+            corrected_data[input.getAttribute('data-key')] = input.value;
+        });
+        
+        try {
+            const response = await fetch(`/api/v2/ocr/${ocrId}/correct`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ corrected_data })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert("OCR Corrections saved and applied successfully!");
+                renderOcrResult(data.ocr_result);
+                loadDocuments();
+            } else {
+                alert(`Failed to save corrections: ${data.message}`);
+            }
+        } catch (err) {
+            alert(`Error saving corrections: ${err}`);
+        }
+    }
+
+    // 9. AI Data Cleaning functions
+    async function loadCleaningSuggestions() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/cleaning/suggestions`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('cleansing-rows');
+            tbody.innerHTML = "";
+
+            if (!data.suggestions || data.suggestions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-3">No pending cleaning suggestions found. Casing and formatting are optimal.</td></tr>`;
+                return;
+            }
+
+            const role = localStorage.getItem('current_role');
+            const canApprove = ['Admin', 'Data Steward'].includes(role);
+
+            data.suggestions.forEach(sug => {
+                const tr = document.createElement('tr');
+                
+                let confidenceClass = 'text-danger';
+                if (sug.confidence >= 0.90) confidenceClass = 'text-success';
+                else if (sug.confidence >= 0.70) confidenceClass = 'text-warning';
+
+                tr.innerHTML = `
+                    <td class="text-secondary fw-bold">${sug.field_name}</td>
+                    <td class="text-secondary text-decoration-line-through">${sug.original_value}</td>
+                    <td class="text-success fw-bold">${sug.suggested_value}</td>
+                    <td class="${confidenceClass} fw-bold">${(sug.confidence * 100).toFixed(0)}%</td>
+                    <td class="small text-secondary">${sug.reason}</td>
+                    <td class="text-end">
+                        ${canApprove ? `
+                            <button class="btn btn-sm btn-success py-0 px-2 me-1" style="font-size:0.8rem" onclick="approveCleaning('${sug.id}')">Approve</button>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.8rem" onclick="rejectCleaning('${sug.id}')">Reject</button>
+                        ` : '<span class="text-secondary small">Read-only</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error("Error loading cleaning suggestions:", err);
+        }
+    }
+
+    async function runCleaningScan() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/cleaning/scan`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadCleaningSuggestions();
+            } else {
+                alert(`Scan failed: ${data.message}`);
+            }
+        } catch (err) {
+            alert(`Error triggering scan: ${err}`);
+        }
+    }
+
+    async function approveCleaning(sugId) {
+        try {
+            const response = await fetch(`/api/v2/cleaning/suggestions/${sugId}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadCleaningSuggestions();
+                // If it modified the vendor name, reload the parent vendor card
+                if (data.suggestion.field_name === 'vendor_name') {
+                    window.location.reload();
+                }
+            } else {
+                alert(`Approval failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error approving cleaning:", err);
+        }
+    }
+
+    async function rejectCleaning(sugId) {
+        try {
+            const response = await fetch(`/api/v2/cleaning/suggestions/${sugId}/reject`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadCleaningSuggestions();
+            } else {
+                alert(`Rejection failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error rejecting cleaning:", err);
+        }
+    }
+
+    async function bulkApplySuggestions() {
+        if (!confirm("Are you sure you want to bulk-approve all pending suggestions?")) return;
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/cleaning/bulk-apply`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert(`Successfully bulk-applied ${data.applied_count} normalization changes!`);
+                window.location.reload();
+            } else {
+                alert(`Bulk-apply failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error bulk-applying cleaning:", err);
+        }
+    }
+
+    // 10. Enterprise Trust Engine functions
+    async function loadTrustHistory() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/trust/history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('trust-history-rows');
+            tbody.innerHTML = "";
+
+            if (!data.history || data.history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-2">No calculations recorded. Click 'Recalculate Model'.</td></tr>`;
+                return;
+            }
+
+            // Load the latest run results into metrics sliders and lists
+            const latest = data.history[data.history.length - 1];
+            document.getElementById('trust-gauge-score').innerText = `${latest.trust_score.toFixed(0)} / 100`;
+            
+            // Progress bars
+            document.getElementById('score-val-reliability').innerText = `${latest.reliability_score.toFixed(0)}%`;
+            document.getElementById('score-bar-reliability').style.width = `${latest.reliability_score}%`;
+            
+            document.getElementById('score-val-compliance').innerText = `${latest.compliance_score.toFixed(0)}%`;
+            document.getElementById('score-bar-compliance').style.width = `${latest.compliance_score}%`;
+            
+            document.getElementById('score-val-confidence').innerText = `${latest.confidence_score.toFixed(0)}%`;
+            document.getElementById('score-bar-confidence').style.width = `${latest.confidence_score}%`;
+            
+            document.getElementById('score-val-risk').innerText = `${latest.risk_score.toFixed(0)}%`;
+            document.getElementById('score-bar-risk').style.width = `${latest.risk_score}%`;
+
+            // Positive / Negative Reasons list
+            const reasonsList = document.getElementById('trust-reasons-list');
+            reasonsList.innerHTML = "";
+            
+            latest.reasons_positive.forEach(r => {
+                reasonsList.innerHTML += `<div class="text-success fw-bold py-1">${r}</div>`;
+            });
+            latest.reasons_negative.forEach(r => {
+                reasonsList.innerHTML += `<div class="text-danger fw-bold py-1">${r}</div>`;
+            });
+
+            // Recommendations List
+            const recsPanel = document.getElementById('trust-recs-panel');
+            const recsList = document.getElementById('trust-recs-list');
+            
+            if (latest.recommendations && latest.recommendations.length > 0) {
+                recsPanel.classList.remove('d-none');
+                recsList.innerHTML = latest.recommendations.map(r => `<div>• ${r}</div>`).join("");
+            } else {
+                recsPanel.classList.add('d-none');
+            }
+
+            // Fill history table rows
+            data.history.forEach(run => {
+                const tr = document.createElement('tr');
+                const runDate = new Date(run.calculated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                tr.innerHTML = `
+                    <td class="text-secondary">${runDate}</td>
+                    <td class="text-info fw-bold">${run.trust_score.toFixed(0)}</td>
+                    <td>${run.reliability_score.toFixed(0)}%</td>
+                    <td>${run.compliance_score.toFixed(0)}%</td>
+                    <td>${run.risk_score.toFixed(0)}%</td>
+                    <td>${run.confidence_score.toFixed(0)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error("Error loading trust history:", err);
+        }
+    }
+
+    async function recalculateTrustScore() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/trust/recalculate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadTrustHistory();
+            } else {
+                alert(`Calculation failed: ${data.message}`);
+            }
+        } catch (err) {
+            alert(`Error triggering recalculation: ${err}`);
+        }
+    }
+
+    // 11. AI Fraud Detection functions
+    let ACTIVE_ALERT_ID = null;
+
+    async function loadFraudAlerts() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/fraud/alerts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.status === 404) {
+                // No scan recorded yet
+                return;
+            }
+            
+            const data = await response.json();
+            const alert = data.fraud_check;
+            ACTIVE_ALERT_ID = alert.id;
+            
+            // Set Score and Risk Level
+            document.getElementById('fraud-score-label').innerText = `${alert.fraud_score.toFixed(0)} / 100`;
+            
+            const riskBadge = document.getElementById('fraud-risk-badge');
+            riskBadge.innerText = alert.risk_level;
+            riskBadge.className = 'badge ms-2';
+            
+            const banner = document.getElementById('fraud-alert-banner');
+            if (alert.risk_level === 'High') {
+                riskBadge.classList.add('bg-danger', 'text-white', 'pulse-glow');
+                banner.style.background = 'rgba(220, 53, 69, 0.1)';
+                banner.style.border = '1px solid rgba(220, 53, 69, 0.2)';
+            } else if (alert.risk_level === 'Medium') {
+                riskBadge.classList.add('bg-warning', 'text-dark');
+                banner.style.background = 'rgba(255, 193, 7, 0.05)';
+                banner.style.border = '1px solid rgba(255, 193, 7, 0.15)';
+            } else {
+                riskBadge.classList.add('bg-success', 'text-white');
+                banner.style.background = 'rgba(40, 167, 69, 0.05)';
+                banner.style.border = '1px solid rgba(40, 167, 69, 0.15)';
+            }
+            
+            // Status Badge
+            const statusBadge = document.getElementById('fraud-status-badge');
+            statusBadge.innerText = alert.status;
+            statusBadge.className = 'badge';
+            if (alert.status === 'Alert') statusBadge.classList.add('bg-danger');
+            else if (alert.status === 'Investigating') statusBadge.classList.add('bg-warning', 'text-dark');
+            else statusBadge.classList.add('bg-success');
+            
+            // Root Cause and Recommendations
+            document.getElementById('fraud-details-box').classList.remove('d-none');
+            document.getElementById('fraud-root-cause').innerText = alert.root_cause;
+            document.getElementById('fraud-recs').innerText = alert.recommended_action;
+            
+            // Evidence breakdown
+            const evidenceBox = document.getElementById('fraud-evidence');
+            evidenceBox.innerHTML = "";
+            const keys = Object.keys(alert.supporting_evidence);
+            if (keys.length === 0) {
+                evidenceBox.innerHTML = `<span class="text-secondary">No cross-entity duplication found.</span>`;
+            } else {
+                keys.forEach(k => {
+                    const detail = alert.supporting_evidence[k];
+                    let text = `<strong>${k.toUpperCase().replace('_', ' ')}:</strong> `;
+                    if (detail.matching_vendors) {
+                        text += `Overlapping Vendor IDs: ${detail.matching_vendors.join(', ')}`;
+                    } else if (detail.reason) {
+                        text += `${detail.reason} (Matched: ${detail.matched_entity})`;
+                    } else if (detail.expired_files) {
+                        text += `Expired: ${detail.expired_files.join(', ')}`;
+                    } else {
+                        text += JSON.stringify(detail);
+                    }
+                    evidenceBox.innerHTML += `<div class="mb-2 py-1 border-bottom border-secondary border-opacity-10">${text}</div>`;
+                });
+            }
+            
+            // Action Control visibility (Visible to Admin/Auditor role)
+            const role = localStorage.getItem('current_role');
+            if (['Admin', 'Auditor'].includes(role) && alert.fraud_score > 0) {
+                document.getElementById('fraud-action-controls').classList.remove('d-none');
+            } else {
+                document.getElementById('fraud-action-controls').classList.add('d-none');
+            }
+            
+        } catch (err) {
+            console.error("Error loading fraud details:", err);
+        }
+    }
+
+    async function runFraudScan() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/fraud/scan`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadFraudAlerts();
+                loadTrustHistory(); // Update trust indicators since fraud effects scores
+            } else {
+                alert(`Fraud scan failed: ${data.message}`);
+            }
+        } catch (err) {
+            alert(`Error triggering fraud audit: ${err}`);
+        }
+    }
+
+    async function resolveFraudAlert(newStatus) {
+        if (!ACTIVE_ALERT_ID) return;
+        try {
+            const response = await fetch(`/api/v2/fraud/alerts/${ACTIVE_ALERT_ID}/status`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadFraudAlerts();
+            } else {
+                alert(`Status update failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error resolving fraud alert:", err);
+        }
+    }
+
+    // 12. Enterprise Compliance Engine functions
+    async function loadComplianceData() {
+        try {
+            // Load Notifications/Alerts
+            const notifResp = await fetch(`/api/v2/vendors/${VENDOR_ID}/compliance/notifications`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const notifData = await notifResp.json();
+            const notifsBox = document.getElementById('compliance-notifications-box');
+            notifsBox.innerHTML = "";
+            
+            if (!notifData.notifications || notifData.notifications.length === 0) {
+                notifsBox.innerHTML = `<div class="text-success fw-bold py-1">✓ No compliance alerts pending. All uploaded files are verified and active.</div>`;
+            } else {
+                notifData.notifications.forEach(n => {
+                    const alertClass = n.alert_type === 'Critical' ? 'text-danger fw-bold' : 'text-warning';
+                    notifsBox.innerHTML += `
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-10">
+                            <span class="${alertClass}">${n.title}: ${n.message}</span>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2 small" style="font-size:0.7rem;" onclick="dismissAlert('${n.id}')">Dismiss</button>
+                        </div>
+                    `;
+                });
+            }
+
+            // Load Compliance checklist and score
+            const auditResp = await fetch(`/api/v2/vendors/${VENDOR_ID}/compliance/scan`, {
+                method: 'POST', // Running scan on fetch to dynamically check state
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const auditData = await auditResp.json();
+            
+            if (auditData.success) {
+                const cStatus = auditData.compliance_status;
+                document.getElementById('compliance-score-val').innerText = `${cStatus.compliance_score.toFixed(0)}%`;
+                document.getElementById('compliance-score-bar').style.width = `${cStatus.compliance_score}%`;
+                
+                const approvalBadge = document.getElementById('compliance-approval-badge');
+                approvalBadge.innerText = cStatus.approval_status;
+                approvalBadge.className = 'badge';
+                if (cStatus.approval_status === 'Approved') approvalBadge.classList.add('bg-success');
+                else if (cStatus.approval_status === 'Pending Approval') approvalBadge.classList.add('bg-warning', 'text-dark');
+                else approvalBadge.classList.add('bg-danger');
+
+                // Render Checklist
+                const checklistBody = document.getElementById('compliance-checklist-rows');
+                checklistBody.innerHTML = "";
+                
+                Object.keys(auditData.checklist).forEach(docType => {
+                    const res = auditData.checklist[docType];
+                    const tr = document.createElement('tr');
+                    
+                    let statusClass = 'bg-secondary';
+                    if (res.status === 'Verified') statusClass = 'bg-success';
+                    else if (res.status === 'Expired' || res.status === 'Rejected') statusClass = 'bg-danger';
+                    else if (res.status === 'Pending Verification') statusClass = 'bg-warning text-dark';
+                    
+                    tr.innerHTML = `
+                        <td class="text-secondary fw-bold">${docType}</td>
+                        <td><span class="badge ${statusClass}">${res.status}</span></td>
+                        <td class="text-end fw-bold text-white">${res.points} Pts</td>
+                    `;
+                    checklistBody.appendChild(tr);
+                });
+                
+                // Show auditor manual control if reviewer has permission
+                const role = localStorage.getItem('current_role');
+                if (['Admin', 'Auditor'].includes(role)) {
+                    document.getElementById('compliance-override-box').classList.remove('d-none');
+                } else {
+                    document.getElementById('compliance-override-box').classList.add('d-none');
+                }
+            }
+
+            // Load Compliance Logs Timeline
+            const logsResp = await fetch(`/api/v2/vendors/${VENDOR_ID}/compliance/timeline`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const logsData = await logsResp.json();
+            const logsBody = document.getElementById('compliance-timeline-rows');
+            logsBody.innerHTML = "";
+            
+            if (!logsData.timeline || logsData.timeline.length === 0) {
+                logsBody.innerHTML = `<tr><td colspan="4" class="text-center text-secondary py-2">No audits recorded.</td></tr>`;
+            } else {
+                logsData.timeline.forEach(log => {
+                    const tr = document.createElement('tr');
+                    const logDate = new Date(log.logged_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    tr.innerHTML = `
+                        <td class="text-secondary">${logDate}</td>
+                        <td class="text-success fw-bold">${log.compliance_score.toFixed(0)}%</td>
+                        <td><span class="badge bg-secondary">${log.status}</span></td>
+                        <td class="small text-secondary text-truncate" style="max-width: 250px;">${log.description}</td>
+                    `;
+                    logsBody.appendChild(tr);
+                });
+            }
+        } catch (err) {
+            console.error("Error loading compliance parameters:", err);
+        }
+    }
+
+    async function runComplianceScan() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/compliance/scan`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadComplianceData();
+                loadTrustHistory();
+            } else {
+                alert(`Scan failed: ${data.message}`);
+            }
+        } catch (err) {
+            alert(`Error triggering compliance check: ${err}`);
+        }
+    }
+
+    async function dismissAlert(notifId) {
+        try {
+            const response = await fetch(`/api/v2/compliance/notifications/${notifId}/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadComplianceData();
+            }
+        } catch (err) {
+            console.error("Error clearing alert notification:", err);
+        }
+    }
+
+    async function overrideStatus(newStatus) {
+        if (!confirm(`Are you sure you want to manually override vendor status to '${newStatus}'?`)) return;
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/compliance/approve`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadComplianceData();
+                window.location.reload();
+            } else {
+                alert(`Status override failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error overriding status:", err);
+        }
+    }
+
+    // 13. Vendor Relationship Graph functions
+    let cyInstance = null;
+    let originalGraphData = null;
+
+    async function loadRelationshipGraph() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/relationship-graph`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            
+            originalGraphData = data.elements;
+            renderGraph(originalGraphData);
+        } catch (err) {
+            console.error("Error fetching relationship graph data:", err);
+        }
+    }
+
+    function renderGraph(elements) {
+        cyInstance = cytoscape({
+            container: document.getElementById('cy-relationship-graph'),
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#8c9cb5',
+                        'label': 'data(label)',
+                        'color': '#f3f6fa',
+                        'font-size': '10px',
+                        'text-valign': 'bottom',
+                        'text-margin-y': 4,
+                        'width': 22,
+                        'height': 22,
+                        'overlay-padding': '3px'
+                    }
+                },
+                {
+                    selector: 'node[type="vendor"]',
+                    style: {
+                        'background-color': '#00c6ff',
+                        'width': 28,
+                        'height': 28,
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: 'node[status="fraud_cluster"]',
+                    style: {
+                        'background-color': '#ff9f43',
+                        'width': 28,
+                        'height': 28,
+                        'border-width': '2px',
+                        'border-color': '#ee5253'
+                    }
+                },
+                {
+                    selector: 'node[status="suspicious"]',
+                    style: {
+                        'background-color': '#ee5253',
+                        'border-width': '2px',
+                        'border-color': '#f3f6fa'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 1.5,
+                        'line-color': '#4a5568',
+                        'target-arrow-color': '#4a5568',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                        'label': 'data(label)',
+                        'font-size': '8px',
+                        'color': '#8c9cb5',
+                        'text-rotation': 'autorotate',
+                        'text-margin-y': -8
+                    }
+                },
+                {
+                    selector: 'edge[status="suspicious"]',
+                    style: {
+                        'line-color': '#ee5253',
+                        'target-arrow-color': '#ee5253',
+                        'width': 2,
+                        'color': '#ee5253',
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: '.highlighted',
+                    style: {
+                        'background-color': '#1dd1a1',
+                        'line-color': '#1dd1a1',
+                        'target-arrow-color': '#1dd1a1',
+                        'width': 3,
+                        'scale': 1.3
+                    }
+                },
+                {
+                    selector: '.dimmed',
+                    style: {
+                        'opacity': 0.25
+                    }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                animate: true,
+                fit: true,
+                padding: 30
+            }
+        });
+    }
+
+    function resetGraphView() {
+        if (cyInstance) {
+            cyInstance.fit();
+            cyInstance.elements().removeClass('highlighted dimmed');
+            document.getElementById('graph-search-input').value = "";
+        }
+    }
+
+    function applyGraphFilters() {
+        if (!originalGraphData || !cyInstance) return;
+        
+        const showInvoices = document.getElementById('filter-invoices').checked;
+        const showPOs = document.getElementById('filter-pos').checked;
+        const showEmployees = document.getElementById('filter-employees').checked;
+        const fraudOnly = document.getElementById('filter-fraud-only').checked;
+        
+        let filteredNodes = originalGraphData.nodes.filter(n => {
+            const type = n.data.type;
+            const status = n.data.status;
+            
+            if (fraudOnly && status !== 'suspicious' && status !== 'fraud_cluster' && status !== 'central') {
+                return false;
+            }
+            if (!showInvoices && type === 'invoice') return false;
+            if (!showPOs && type === 'po') return false;
+            if (!showEmployees && type === 'employee') return false;
+            return true;
+        });
+
+        const activeNodeIds = new Set(filteredNodes.map(n => n.data.id));
+
+        let filteredEdges = originalGraphData.edges.filter(e => {
+            const source = e.data.source;
+            const target = e.data.target;
+            const status = e.data.status;
+            
+            if (fraudOnly && status !== 'suspicious') return false;
+            return activeNodeIds.has(source) && activeNodeIds.has(target);
+        });
+
+        cyInstance.json({ elements: { nodes: filteredNodes, edges: filteredEdges } });
+        cyInstance.layout({ name: 'cose', fit: true, padding: 30 }).run();
+    }
+
+    function highlightGraphNode() {
+        if (!cyInstance) return;
+        const search = document.getElementById('graph-search-input').value.toLowerCase().trim();
+        if (!search) {
+            cyInstance.elements().removeClass('highlighted dimmed');
+            return;
+        }
+        
+        cyInstance.elements().addClass('dimmed').removeClass('highlighted');
+        const matched = cyInstance.nodes().filter(n => n.data('label').toLowerCase().includes(search));
+        matched.removeClass('dimmed').addClass('highlighted');
+        matched.neighborhood().removeClass('dimmed').addClass('highlighted');
+    }
+
+    // 14. Vendor Activity Audit Trail Timeline functions
+    let timelineEventsData = [];
+
+    async function loadTimelineEvents() {
+        try {
+            const search = document.getElementById('timeline-search').value;
+            const startDate = document.getElementById('timeline-start-date').value;
+            const endDate = document.getElementById('timeline-end-date').value;
+            
+            let url = `/api/v2/vendors/${VENDOR_ID}/activities?`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (startDate) url += `start_date=${startDate}&`;
+            if (endDate) url += `end_date=${endDate}&`;
+
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            timelineEventsData = data.activities || [];
+            
+            renderTimelineList(timelineEventsData);
+        } catch (err) {
+            console.error("Error loading timeline events:", err);
+        }
+    }
+
+    function renderTimelineList(activities) {
+        const container = document.getElementById('timeline-events-list');
+        container.innerHTML = "";
+
+        if (activities.length === 0) {
+            container.innerHTML = `<div class="text-center text-secondary py-3">No activities found matching filters.</div>`;
+            return;
+        }
+
+        activities.forEach(act => {
+            const evDiv = document.createElement('div');
+            evDiv.className = "d-flex gap-3 mb-3 pb-3 border-bottom border-secondary border-opacity-10";
+            
+            // Map Type Badges
+            let badgeClass = 'bg-secondary';
+            if (act.activity_type === 'Approval') badgeClass = 'bg-success';
+            else if (act.activity_type === 'Rejection' || act.activity_type === 'Fraud Alert') badgeClass = 'bg-danger';
+            else if (act.activity_type === 'Document Uploaded') badgeClass = 'bg-primary';
+            else if (act.activity_type === 'Trust Score Changed') badgeClass = 'bg-info';
+            else if (act.activity_type === 'Risk Score Changed') badgeClass = 'bg-warning text-dark';
+            else if (act.activity_type === 'Admin Actions') badgeClass = 'bg-dark border border-secondary';
+
+            const dt = new Date(act.created_at);
+            const timeStr = dt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const dateStr = dt.toLocaleDateString([], {month: 'short', day: 'numeric'});
+
+            evDiv.innerHTML = `
+                <div class="text-center" style="min-width: 60px;">
+                    <div class="small fw-bold text-white">${dateStr}</div>
+                    <div class="small text-secondary" style="font-size:0.75rem">${timeStr}</div>
+                </div>
+                <div style="width: 2px; background: rgba(255,255,255,0.05); margin: 2px 0;"></div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <span class="badge ${badgeClass} mb-1" style="font-size:0.7rem">${act.activity_type}</span>
+                        <span class="small text-secondary" style="font-size:0.7rem">By: ${act.performed_by}</span>
+                    </div>
+                    <div class="text-white small fw-bold">${act.description}</div>
+                </div>
+            `;
+            container.appendChild(evDiv);
+        });
+    }
+
+    function clearTimelineFilters() {
+        document.getElementById('timeline-search').value = "";
+        document.getElementById('timeline-start-date').value = "";
+        document.getElementById('timeline-end-date').value = "";
+        loadTimelineEvents();
+    }
+
+    function exportTimeline(format) {
+        if (timelineEventsData.length === 0) {
+            alert("No events data found to export.");
+            return;
+        }
+
+        let content = "";
+        let filename = `vendor_timeline_${VENDOR_ID}`;
+        
+        if (format === 'json') {
+            content = JSON.stringify(timelineEventsData, null, 2);
+            filename += ".json";
+            downloadFile(content, 'application/json', filename);
+        } else if (format === 'csv') {
+            filename += ".csv";
+            let csv = "ID,Created At,Activity Type,Description,Performed By\n";
+            timelineEventsData.forEach(act => {
+                const descEscaped = act.description.replace(/"/g, '""');
+                csv += `"${act.id}","${act.created_at}","${act.activity_type}","${descEscaped}","${act.performed_by}"\n`;
+            });
+            downloadFile(csv, 'text/csv', filename);
+        }
+    }
+
+    function downloadFile(content, mimeType, filename) {
+        const blob = new Blob([content], { type: mimeType });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 15. Centralized Notification Center functions
+    let showOnlyUnreadNotifs = true;
+
+    function toggleNotifDrawer() {
+        const drawer = document.getElementById('notif-drawer');
+        drawer.classList.toggle('d-none');
+        if (!drawer.classList.contains('d-none')) {
+            loadSystemNotifications();
+        }
+    }
+
+    async function loadSystemNotifications() {
+        try {
+            const search = document.getElementById('notif-search').value;
+            const activeRole = localStorage.getItem('current_role') || 'Viewer';
+            
+            let url = `/api/v2/notifications?only_unread=${showOnlyUnreadNotifs}&`;
+            if (search) url += `search=${encodeURIComponent(search)}`;
+
+            const response = await fetch(url, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+
+            renderNotifList(data.notifications);
+        } catch (err) {
+            console.error("Error loading system notifications:", err);
+        }
+    }
+
+    function renderNotifList(notifications) {
+        const container = document.getElementById('notif-list-container');
+        const badge = document.getElementById('notif-badge-count');
+        container.innerHTML = "";
+
+        const unreadCount = notifications.filter(n => !n.is_read).length;
+        if (unreadCount > 0) {
+            badge.innerText = unreadCount;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+
+        if (notifications.length === 0) {
+            container.innerHTML = `<div class="text-center text-secondary py-3">No notifications.</div>`;
+            return;
+        }
+
+        notifications.forEach(n => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `p-2 mb-2 rounded border border-opacity-10 d-flex justify-content-between align-items-start ${n.is_read ? 'bg-dark border-secondary opacity-75' : 'bg-secondary bg-opacity-10 border-info'}`;
+            
+            let pColor = '#8c9cb5';
+            if (n.priority === 'Critical') pColor = '#ee5253';
+            else if (n.priority === 'High') pColor = '#ff9f43';
+            else if (n.priority === 'Medium') pColor = '#00c6ff';
+
+            const dt = new Date(n.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            itemDiv.innerHTML = `
+                <div class="flex-grow-1 pe-2" style="font-size:0.75rem;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="d-inline-block rounded-circle" style="width:8px; height:8px; background-color:${pColor}"></span>
+                        <strong class="text-white">${n.title}</strong>
+                        <span class="text-secondary" style="font-size:0.65rem">${dt}</span>
+                    </div>
+                    <div class="text-secondary-light">${n.message}</div>
+                </div>
+                <div class="btn-group">
+                    ${!n.is_read ? `<button class="btn btn-xs btn-link text-info p-0 me-2 text-decoration-none" onclick="markNotifRead(${n.id}, event)" title="Mark read">✓</button>` : ''}
+                    <button class="btn btn-xs btn-link text-danger p-0 text-decoration-none" onclick="archiveNotif(${n.id}, event)" title="Archive">✕</button>
+                </div>
+            `;
+            container.appendChild(itemDiv);
+        });
+    }
+
+    async function markNotifRead(notifId, event) {
+        if (event) event.stopPropagation();
+        try {
+            const response = await fetch(`/api/v2/notifications/${notifId}/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadSystemNotifications();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function archiveNotif(notifId, event) {
+        if (event) event.stopPropagation();
+        try {
+            const response = await fetch(`/api/v2/notifications/${notifId}/archive`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadSystemNotifications();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function markAllNotifsRead() {
+        try {
+            const activeRole = localStorage.getItem('current_role') || 'Viewer';
+            const response = await fetch(`/api/v2/notifications/read-all`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadSystemNotifications();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function toggleArchiveView() {
+        showOnlyUnreadNotifs = !showOnlyUnreadNotifs;
+        loadSystemNotifications();
+    }
+
+    async function updateNotifBadgeCount() {
+        try {
+            const activeRole = localStorage.getItem('current_role') || 'Viewer';
+            const response = await fetch(`/api/v2/notifications?only_unread=true`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            const badge = document.getElementById('notif-badge-count');
+            const unreadCount = data.notifications.length;
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (err) {
+            console.error("Error updating badge count:", err);
+        }
+    }
+
+    // 16. AI Copilot Recommendation Engine functions
+    async function loadAiRecommendations() {
+        try {
+            const response = await fetch(`/api/v2/vendors/${VENDOR_ID}/recommendations`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            
+            renderRecommendationsList(data.recommendations);
+        } catch (err) {
+            console.error("Error loading AI recommendations:", err);
+        }
+    }
+
+    function renderRecommendationsList(recommendations) {
+        const container = document.getElementById('ai-recs-container');
+        container.innerHTML = "";
+
+        const pendingRecs = recommendations.filter(r => r.status === 'Pending');
+
+        if (pendingRecs.length === 0) {
+            container.innerHTML = `<div class="text-center text-secondary py-3">No pending AI recommendations. Vendor profile is fully optimized.</div>`;
+            return;
+        }
+
+        const role = localStorage.getItem('current_role') || 'Viewer';
+        const canOverride = ['Admin', 'Auditor', 'Manager'].includes(role);
+
+        pendingRecs.forEach(r => {
+            const card = document.createElement('div');
+            card.className = "p-3 rounded border border-secondary border-opacity-20 position-relative";
+            card.style.background = "rgba(255, 255, 255, 0.01)";
+
+            let badgeClass = "bg-primary";
+            if (r.recommendation_type === 'Merge Duplicate') badgeClass = "bg-warning text-dark";
+            else if (r.recommendation_type === 'Verify Document') badgeClass = "bg-info";
+            else if (r.recommendation_type === 'Compliance Improvement') badgeClass = "bg-danger";
+
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge ${badgeClass} me-2" style="font-size:0.65rem">${r.recommendation_type}</span>
+                        <strong class="text-white">${r.title}</strong>
+                    </div>
+                    <span class="text-info small fw-bold" style="font-size:0.75rem">🤖 Confidence: ${r.confidence.toFixed(0)}%</span>
+                </div>
+                <div class="text-secondary small mb-2">${r.description}</div>
+                <div class="p-2 rounded mb-3 small" style="background: rgba(0,0,0,0.15); font-size:0.75rem;">
+                    <div class="text-secondary mb-1"><strong>Reason:</strong> ${r.reason}</div>
+                    <div class="text-secondary-light mb-1"><strong>Impact:</strong> ${r.business_impact}</div>
+                    <div class="text-success"><strong>Est. Score Boost:</strong> +${r.estimated_score_improvement.toFixed(0)} Pts</div>
+                </div>
+                ${canOverride ? `
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-xs btn-outline-danger px-2" style="font-size:0.7rem;" onclick="rejectRecommendation(${r.id})">Dismiss</button>
+                    <button class="btn btn-xs btn-custom-cyan px-3 fw-bold" style="font-size:0.7rem;" onclick="applyRecommendation(${r.id})">✓ Approve & Apply</button>
+                </div>
+                ` : ''}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function applyRecommendation(recId) {
+        try {
+            const activeRole = localStorage.getItem('current_role') || 'Viewer';
+            const response = await fetch(`/api/v2/recommendations/${recId}/apply`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadAiRecommendations();
+                loadDocuments();
+            } else {
+                alert(`Action failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error applying recommendation:", err);
+        }
+    }
+
+    async function rejectRecommendation(recId) {
+        try {
+            const activeRole = localStorage.getItem('current_role') || 'Viewer';
+            const response = await fetch(`/api/v2/recommendations/${recId}/reject`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadAiRecommendations();
+            } else {
+                alert(`Action failed: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error rejecting recommendation:", err);
+        }
+    }
+
+    // Load all data packages when documents list updates or when role changes
+    const originalLoadDocuments = loadDocuments;
+    loadDocuments = async function() {
+        await originalLoadDocuments();
+        loadCleaningSuggestions();
+        loadTrustHistory();
+        loadFraudAlerts();
+        loadComplianceData();
+        loadRelationshipGraph();
+        loadTimelineEvents();
+        updateNotifBadgeCount();
+        loadAiRecommendations();
+    }
+</script>
+
+    <!-- AI Copilot Floating Drawer -->
+    <style>
+        .copilot-bubble {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8e2de2 0%, #4facfe 100%);
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse-glow 2s infinite;
+        }
+        .copilot-bubble:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 242, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+        }
+        .copilot-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 520px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(11, 15, 25, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 9999;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .copilot-panel.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .copilot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .copilot-msg {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .copilot-msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #0b0f19;
+            border-bottom-right-radius: 2px;
+        }
+        .copilot-msg.copilot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f3f6fa;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-bottom-left-radius: 2px;
+        }
+        .copilot-msg pre {
+            background: rgba(0,0,0,0.2) !important;
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            margin-top: 5px;
+            margin-bottom: 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .copilot-msg table {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .copilot-msg table th, .copilot-msg table td {
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 4px;
+        }
+        .copilot-quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0,0,0,0.2);
+        }
+        .copilot-chip {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #8c9cb5;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copilot-chip:hover {
+            background: rgba(0, 242, 254, 0.1);
+            color: #00f2fe;
+            border-color: #00f2fe;
+        }
+        .copilot-input-area {
+            display: flex;
+            padding: 10px 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 10px;
+        }
+    </style>
+
+    <div class="copilot-bubble" id="copilotBtn" onclick="toggleCopilotPanel()">🤖</div>
+    
+    <div class="copilot-panel" id="copilotPanel">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-10" style="background: rgba(0,0,0,0.2);">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 1.2rem;">🤖</span>
+                <div>
+                    <strong class="text-white d-block" style="font-size: 0.9rem; line-height:1.2;">Enterprise AI Copilot</strong>
+                    <span class="text-success" style="font-size: 0.7rem;">● Online | Context Aware</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" style="font-size:0.8rem;" onclick="toggleCopilotPanel()"></button>
+        </div>
+        
+        <div class="copilot-messages" id="copilotMessages">
+            <div class="copilot-msg copilot">
+                Hello! I am your Enterprise AI Copilot. Ask me questions about vendor trust, risk metrics, duplicate warnings, or compliance checklists.
+            </div>
+        </div>
+        
+        <div class="copilot-quick-chips">
+            <span class="copilot-chip" onclick="askCopilotQuick('Generate executive summary')">📊 Exec Summary</span>
+            <span class="copilot-chip" onclick="askCopilotQuick('Show duplicate vendors')">⚠️ Show Duplicates</span>
+            <span class="copilot-chip" onclick="askCopilotQuick('Which vendors are high risk?')">🚨 List High Risk</span>
+            <span class="copilot-chip" id="copilot-chip-context" onclick="askCopilotContextual()">🔍 Analyze Profile</span>
+        </div>
+        
+        <div class="copilot-input-area">
+            <input type="text" id="copilotInput" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ask copilot..." onkeydown="onCopilotKeydown(event)">
+            <button class="btn btn-sm btn-custom-cyan px-3" onclick="sendCopilotMessage()">Send</button>
+        </div>
+    </div>
+
+<script>
+    let copilotSessionId = localStorage.getItem('copilot_session_id') || "";
+    
+    if (!copilotSessionId) {
+        copilotSessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('copilot_session_id', copilotSessionId);
+    }
+
+    function toggleCopilotPanel() {
+        const panel = document.getElementById('copilotPanel');
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) {
+            loadCopilotHistory();
+        }
+    }
+
+    async function loadCopilotHistory() {
+        const tok = localStorage.getItem('dashboard_token') || localStorage.getItem('token');
+        if (!tok) return;
+        
+        try {
+            const response = await fetch(`/api/v2/copilot/history?session_id=${copilotSessionId}`, {
+                headers: { 'Authorization': `Bearer ${tok}` }
+            });
+            const data = await response.json();
+            if (data.success && data.history.length > 0) {
+                const container = document.getElementById('copilotMessages');
+                container.innerHTML = "";
+                data.history.forEach(m => {
+                    appendCopilotMsg(m.sender, m.message);
+                });
+                scrollCopilotToBottom();
+            }
+        } catch (err) {
+            console.error("Error loading copilot history:", err);
+        }
+    }
+
+    async function sendCopilotMessage() {
+        const input = document.getElementById('copilotInput');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        input.value = "";
+        appendCopilotMsg('user', text);
+        scrollCopilotToBottom();
+        
+        // Add loading spinner
+        const container = document.getElementById('copilotMessages');
+        const loader = document.createElement('div');
+        loader.id = 'copilot-loader';
+        loader.className = "copilot-msg copilot text-secondary";
+        loader.innerHTML = "Thinking...";
+        container.appendChild(loader);
+        scrollCopilotToBottom();
+
+        const tok = localStorage.getItem('dashboard_token') || localStorage.getItem('token');
+        if (!tok) {
+            loader.innerHTML = "⚠️ Please authenticate first.";
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v2/copilot/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tok}`
+                },
+                body: JSON.stringify({ message: text, session_id: copilotSessionId })
+            });
+            const data = await response.json();
+            
+            // Remove loader
+            loader.remove();
+            
+            if (data.success) {
+                appendCopilotMsg('copilot', data.response);
+                scrollCopilotToBottom();
+            } else {
+                appendCopilotMsg('copilot', "⚠️ Failed to resolve response: " + data.message);
+                scrollCopilotToBottom();
+            }
+        } catch (err) {
+            loader.remove();
+            appendCopilotMsg('copilot', "⚠️ Connection error to copilot backend API.");
+            scrollCopilotToBottom();
+        }
+    }
+
+    function appendCopilotMsg(sender, text) {
+        const container = document.getElementById('copilotMessages');
+        const div = document.createElement('div');
+        div.className = `copilot-msg ${sender}`;
+        
+        // Convert basic tables and lists
+        let html = text;
+        
+        // Markdown Tables parsing
+        if (html.includes('|')) {
+            const lines = html.split('<br/>').length > 1 ? html.split('<br/>') : html.split('\n');
+            let inTable = false;
+            let tableHtml = "<table>";
+            let parsedHtml = "";
+            
+            lines.forEach(line => {
+                if (line.trim().startsWith('|')) {
+                    if (!inTable) {
+                        inTable = true;
+                        tableHtml = "<table>";
+                    }
+                    const cols = line.split('|').map(c => c.trim()).filter((c, i, a) => i > 0 && i < a.length - 1);
+                    if (line.includes('---')) {
+                        // Separator, skip
+                        return;
+                    }
+                    tableHtml += "<tr>" + cols.map(c => `<td>${c}</td>`).join('') + "</tr>";
+                } else {
+                    if (inTable) {
+                        inTable = false;
+                        tableHtml += "</table>";
+                        parsedHtml += tableHtml;
+                    }
+                    parsedHtml += line + "<br/>";
+                }
+            });
+            if (inTable) {
+                tableHtml += "</table>";
+                parsedHtml += tableHtml;
+            }
+            html = parsedHtml;
+        } else {
+            html = html.replace(/\n/g, '<br/>');
+        }
+        
+        // Code pre blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+        // Bold tags
+        html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
+        // Bullets
+        html = html.replace(/\*\s+/g, '• ');
+        
+        div.innerHTML = html;
+        container.appendChild(div);
+    }
+
+    function scrollCopilotToBottom() {
+        const container = document.getElementById('copilotMessages');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function onCopilotKeydown(event) {
+        if (event.key === 'Enter') {
+            sendCopilotMessage();
+        }
+    }
+
+    function askCopilotQuick(text) {
+        document.getElementById('copilotInput').value = text;
+        sendCopilotMessage();
+    }
+
+    function askCopilotContextual() {
+        const path = window.location.pathname;
+        if (path.includes('/result/')) {
+            const parts = path.split('/');
+            const id = parts[parts.length - 1];
+            askCopilotQuick(`Why is trust score low for vendor ID ${id}`);
+        } else {
+            askCopilotQuick(`Suggest improvements for vendor ID 1`);
+        }
+    }
+
+    // Adapt quick chip text based on contextual page
+    document.addEventListener("DOMContentLoaded", () => {
+        const chip = document.getElementById('copilot-chip-context');
+        if (window.location.pathname.includes('/result/')) {
+            chip.innerText = "🔍 Explain Score";
+        } else {
+            chip.innerText = "⚡ Suggest Fixes";
+        }
+    });
+    // Setup Real-Time WebSocket Event Listener
+    function connectEventSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = `${wsProtocol}//${window.location.hostname}:5001`;
+        const socket = new WebSocket(socketUrl);
+
+        socket.onopen = () => {
+            console.log("WebSocket connected to real-time events server gateway.");
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                showLiveToast(data.event_type, data.payload);
+            } catch (err) {
+                console.error("Error parsing WebSocket event:", err);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
+            setTimeout(connectEventSocket, 5000);
+        };
+    }
+
+    function showLiveToast(type, payload) {
+        const container = document.getElementById('live-toast-container');
+        if (!container) return;
+
+        // Determine icon and color based on event type
+        let icon = 'bi-info-circle';
+        let color = 'text-info';
+        let border = 'rgba(0, 184, 255, 0.4)';
+        let title = type;
+        let body = '';
+
+        if (type === 'Document Upload') {
+            icon = 'bi-file-earmark-arrow-up';
+            color = 'text-info';
+            border = 'rgba(0, 184, 255, 0.4)';
+            body = `New document <strong>${payload.document_name}</strong> (${payload.document_type}) uploaded for Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Fraud Alert') {
+            icon = 'bi-shield-exclamation';
+            color = 'text-danger';
+            border = 'rgba(255, 69, 96, 0.4)';
+            body = `<strong>Fraud Warning Flagged:</strong> ${payload.root_cause} (Risk level: ${payload.risk_level}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Risk Alert') {
+            icon = 'bi-exclamation-triangle';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>Critical Risk Alert:</strong> Trust score has fallen on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Trust Score Change') {
+            icon = 'bi-graph-up';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Trust score recalculated to <strong>${payload.trust_score}</strong>.`;
+        } else if (type === 'Quality Score Change') {
+            icon = 'bi-award';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Quality score recalculated to <strong>${payload.quality_rating}</strong>.`;
+        } else if (type === 'Compliance Change') {
+            icon = 'bi-card-checklist';
+            color = 'text-cyan';
+            border = 'rgba(0, 242, 254, 0.4)';
+            body = `Compliance score updated to <strong>${payload.compliance_score}%</strong> (Status: ${payload.approval_status}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Vendor Update') {
+            icon = 'bi-person-gear';
+            color = 'text-white';
+            border = 'rgba(255, 255, 255, 0.2)';
+            body = `Vendor profile <strong>${payload.name}</strong> status updated to <strong>${payload.status}</strong>.`;
+        } else if (type === 'Live Notification') {
+            icon = 'bi-bell-fill';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>${payload.title}</strong>: ${payload.message}`;
+        }
+
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const toastHtml = `
+            <div id="${toastId}" class="toast show glass-card border mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="background: rgba(22, 33, 54, 0.85); border-color: ${border}; min-width: 320px;">
+                <div class="toast-header border-bottom border-secondary border-opacity-10 text-white" style="background: transparent;">
+                    <i class="bi ${icon} ${color} me-2" style="font-size: 1.1rem;"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-secondary">Just now</small>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close" onclick="document.getElementById('${toastId}').remove()"></button>
+                </div>
+                <div class="toast-body text-white" style="font-size: 0.85rem;">
+                    ${body}
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Auto remove toast after 6 seconds
+        setTimeout(() => {
+            const toastEl = document.getElementById(toastId);
+            if (toastEl) {
+                toastEl.classList.remove('show');
+                setTimeout(() => toastEl.remove(), 300);
+            }
+        }, 6000);
+    }
+
+    // Initialize socket connection
+    window.addEventListener('DOMContentLoaded', connectEventSocket);
+</script>
+
+<div id="live-toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
 
 </body>
 </html>

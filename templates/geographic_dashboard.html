@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geographic Analytics | Vendor Operations</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Leaflet.js for mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        #map {
+            height: 650px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+
+        /* Leaflet Dark mode styling overrides */
+        .leaflet-container {
+            background: #0b0f19 !important;
+        }
+        .leaflet-popup-content-wrapper {
+            background: rgba(22, 33, 54, 0.9) !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--card-border) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        .leaflet-popup-tip {
+            background: rgba(22, 33, 54, 0.9) !important;
+            border: 1px solid var(--card-border) !important;
+        }
+
+        .region-card {
+            padding: 16px;
+            border-left: 4px solid var(--cyan-glow);
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+        .region-card:hover {
+            transform: translateX(4px);
+            background: rgba(255,255,255,0.02);
+        }
+        .region-card.north { border-left-color: var(--info-glow); }
+        .region-card.west { border-left-color: var(--purple-glow); }
+        .region-card.south { border-left-color: var(--success-glow); }
+
+        .search-suggest {
+            position: absolute;
+            width: 100%;
+            z-index: 1000;
+            background: rgba(22, 33, 54, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .suggest-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+        .suggest-item:hover {
+            background: rgba(0, 242, 254, 0.1);
+        }
+
+        .map-legend {
+            background: rgba(11, 15, 25, 0.85);
+            border: 1px solid var(--card-border);
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🗺️ VENDOR GIS GATEWAY</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/data-lineage"><i class="bi bi-diagram-2"></i> 🧬 Lineage</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/fraud-investigator"><i class="bi bi-shield-alert"></i> 🔍 Fraud Tracer</a>
+                <a class="btn btn-sm btn-danger fw-bold" href="/knowledge-graph"><i class="bi bi-diagram-3"></i> 🕸️ Knowledge Graph</a>
+                <a class="btn btn-sm btn-success fw-bold" href="/vendor-360"><i class="bi bi-person-bounding-box"></i> 🏢 Vendor 360</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/xai-dashboard"><i class="bi bi-cpu"></i> 🔬 Explainable AI</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column mb-4">
+        <!-- Dashboard Intro -->
+        <div class="mb-4">
+            <h1 class="accent-text-glow fw-bold mb-1">Geographic Information Systems (GIS) Analytics</h1>
+            <p class="text-secondary mb-0">Multi-dimensional geospatial audits across regional clusters, trust ratings, and compliance distributions.</p>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            <!-- Left Panel: Configurations and Comparatives -->
+            <div class="col-xl-4 col-12 d-flex flex-column gap-3">
+                
+                <!-- Filters & Search -->
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-filter"></i> Filters & Search</h5>
+                    
+                    <!-- Search Input -->
+                    <div class="mb-3 position-relative">
+                        <label class="text-secondary small fw-bold mb-1">SEARCH VENDOR ON MAP</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="map-search" placeholder="Type vendor name..." oninput="handleSearchInput(this.value)">
+                        </div>
+                        <div id="search-suggestions" class="search-suggest" style="display: none;"></div>
+                    </div>
+
+                    <!-- Category & Status -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6 col-12">
+                            <label class="text-secondary small fw-bold mb-1">CATEGORY</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="filter-category" onchange="loadGeographicData()">
+                                <option value="All">All Categories</option>
+                                <option value="IT & Services">IT & Services</option>
+                                <option value="Logistics">Logistics</option>
+                                <option value="Consulting">Consulting</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-12">
+                            <label class="text-secondary small fw-bold mb-1">STATUS</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="filter-status" onchange="loadGeographicData()">
+                                <option value="All">All Statuses</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Map Overlay Mode -->
+                    <div class="mb-2">
+                        <label class="text-secondary small fw-bold mb-1">MAP OVERLAY MODE</label>
+                        <select class="form-select bg-dark border-secondary text-white" id="map-overlay-mode" onchange="toggleOverlayMode()">
+                            <option value="markers">Individual Vendor Markers</option>
+                            <option value="density">Vendor Density Heatmap</option>
+                            <option value="trust">Trust Index Heatmap</option>
+                            <option value="risk">Threat Vector Risk Heatmap</option>
+                            <option value="compliance">Compliance Rate Heatmap</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Regional Comparisons -->
+                <div class="glass-card p-4 flex-grow-1">
+                    <h5 class="text-white mb-3"><i class="bi bi-globe"></i> Regional Comparison Metrics</h5>
+                    
+                    <div class="d-flex flex-column gap-2" id="regional-cards-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: The Map Canvas -->
+            <div class="col-xl-8 col-12 d-flex flex-column">
+                <div class="glass-card p-2 flex-grow-1 position-relative">
+                    <div id="map"></div>
+                    
+                    <!-- Map Legend overlay -->
+                    <div class="position-absolute bottom-0 start-0 m-4 z-3 map-legend" id="legend-overlay">
+                        <div class="fw-bold mb-1 text-white">Intensity Index</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 12px; height: 12px; background: #00e396; border-radius: 2px;"></div>
+                            <span>High / Excellent</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 12px; height: 12px; background: #ffb01a; border-radius: 2px;"></div>
+                            <span>Moderate / Medium</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 12px; height: 12px; background: #ff4560; border-radius: 2px;"></div>
+                            <span>Low / Critical Threat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        // Initialize Map
+        const map = L.map('map').setView([21.0000, 78.0000], 5); // Center on India coordinates
+        
+        // CartoDB Dark Matter map tiles for sleek modern dark theme styling
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        let allVendors = [];
+        let markerLayer = L.layerGroup().addTo(map);
+        let heatLayer = null;
+
+        async function loadGeographicData() {
+            const cat = document.getElementById('filter-category').value;
+            const status = document.getElementById('filter-status').value;
+            
+            try {
+                const response = await fetch(`/api/v2/analytics/geographic?category=${cat}&status=${status}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!data.success) return;
+
+                allVendors = data.vendors;
+                renderRegionalCards(data.regions);
+                updateMapDisplay();
+            } catch (err) {
+                console.error("Error fetching geographic telemetry:", err);
+            }
+        }
+
+        function renderRegionalCards(regions) {
+            const container = document.getElementById('regional-cards-container');
+            container.innerHTML = "";
+
+            const classes = ['north', 'west', 'south'];
+            let index = 0;
+
+            for (const [name, r] of Object.entries(regions)) {
+                const cls = classes[index % 3];
+                index++;
+                
+                container.innerHTML += `
+                    <div class="glass-card region-card ${cls}">
+                        <div class="fw-bold text-white mb-2 fs-6"><i class="bi bi-pin-map-fill"></i> ${name}</div>
+                        <div class="row g-2 text-center text-secondary small">
+                            <div class="col-3">
+                                <span class="d-block text-white fw-bold fs-5">${r.count}</span>
+                                <span>Vendors</span>
+                            </div>
+                            <div class="col-3 border-start border-secondary border-opacity-10">
+                                <span class="d-block text-info fw-bold fs-6">${r.avg_trust}</span>
+                                <span>Trust Idx</span>
+                            </div>
+                            <div class="col-3 border-start border-secondary border-opacity-10">
+                                <span class="d-block text-danger fw-bold fs-6">${r.avg_risk}</span>
+                                <span>Risk Idx</span>
+                            </div>
+                            <div class="col-3 border-start border-secondary border-opacity-10">
+                                <span class="d-block text-cyan fw-bold fs-6">${r.avg_compliance}%</span>
+                                <span>Compl.</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateMapDisplay() {
+            // Remove previous layers
+            markerLayer.clearLayers();
+            if (heatLayer) {
+                map.removeLayer(heatLayer);
+                heatLayer = null;
+            }
+
+            const mode = document.getElementById('map-overlay-mode').value;
+            const legend = document.getElementById('legend-overlay');
+
+            if (mode === 'markers') {
+                legend.style.display = 'none';
+                
+                // Add individual markers
+                allVendors.forEach(v => {
+                    // Pick marker color based on trust score
+                    let color = 'red';
+                    if (v.trust_score >= 80) color = 'green';
+                    else if (v.trust_score >= 50) color = 'orange';
+
+                    // Draw custom circle marker
+                    const marker = L.circleMarker([v.lat, v.lon], {
+                        radius: 8,
+                        fillColor: color,
+                        color: "#fff",
+                        weight: 1.5,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    const popupContent = `
+                        <div style="font-family: 'Outfit', sans-serif;">
+                            <strong class="text-white">${v.name}</strong><br/>
+                            <span class="text-secondary small">${v.category} | ${v.status}</span><hr style="margin: 6px 0; border-color: rgba(255,255,255,0.1)">
+                            <div class="d-flex justify-content-between gap-3">
+                                <span>Trust Score:</span><strong class="text-info">${v.trust_score}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between gap-3">
+                                <span>Compliance:</span><strong class="text-cyan">${v.compliance_score}%</strong>
+                            </div>
+                            <div class="d-flex justify-content-between gap-3">
+                                <span>Risk:</span><strong class="text-danger">${v.risk_score}</strong>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <a href="/result/${v.id}" class="btn btn-xs btn-outline-info text-cyan px-2 py-1" style="font-size: 0.75rem;">View Profile &rarr;</a>
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+                    markerLayer.addLayer(marker);
+                });
+            } else {
+                legend.style.display = 'block';
+                
+                // Heatmap logic
+                let heatPoints = [];
+                allVendors.forEach(v => {
+                    let weight = 0.5;
+                    if (mode === 'density') {
+                        weight = 1.0;
+                    } else if (mode === 'trust') {
+                        weight = v.trust_score / 100.0;
+                    } else if (mode === 'risk') {
+                        weight = v.risk_score / 100.0;
+                    } else if (mode === 'compliance') {
+                        weight = v.compliance_score / 100.0;
+                    }
+                    heatPoints.push([v.lat, v.lon, weight]);
+                });
+
+                // Configure colors based on mode
+                let grad = { 0.4: 'blue', 0.65: 'lime', 1: 'red' };
+                if (mode === 'trust' || mode === 'compliance') {
+                    grad = { 0.4: 'red', 0.65: 'yellow', 1: 'green' };
+                }
+
+                heatLayer = L.heatLayer(heatPoints, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 10,
+                    gradient: grad
+                }).addTo(map);
+            }
+        }
+
+        function toggleOverlayMode() {
+            updateMapDisplay();
+        }
+
+        // Auto suggestion & search zoom logic
+        function handleSearchInput(val) {
+            const suggestBox = document.getElementById('search-suggestions');
+            suggestBox.innerHTML = "";
+            
+            if (!val.trim()) {
+                suggestBox.style.display = 'none';
+                return;
+            }
+
+            const matches = allVendors.filter(v => v.name.toLowerCase().includes(val.toLowerCase())).slice(0, 5);
+            if (matches.length === 0) {
+                suggestBox.style.display = 'none';
+                return;
+            }
+
+            suggestBox.style.display = 'block';
+            matches.forEach(m => {
+                const item = document.createElement('div');
+                item.className = "suggest-item";
+                item.innerHTML = `<strong>${m.name}</strong> <span class="text-secondary small">(${m.address.split(',')[1] || m.address})</span>`;
+                item.onclick = () => {
+                    document.getElementById('map-search').value = m.name;
+                    suggestBox.style.display = 'none';
+                    zoomToVendor(m);
+                };
+                suggestBox.appendChild(item);
+            });
+        }
+
+        function zoomToVendor(v) {
+            // Force map overlay mode to markers so they can click the zoomed vendor
+            document.getElementById('map-overlay-mode').value = 'markers';
+            updateMapDisplay();
+
+            // Pan and Zoom map directly to the vendor's coordinate point
+            map.setView([v.lat, v.lon], 13);
+            
+            // Find and open popup of that specific vendor marker
+            markerLayer.eachLayer(layer => {
+                if (layer.getLatLng && layer.getLatLng().lat === v.lat && layer.getLatLng().lng === v.lon) {
+                    layer.openPopup();
+                }
+            });
+        }
+
+        // Load GIS telemetry on load
+        window.addEventListener('DOMContentLoaded', loadGeographicData);
+    </script>
+
+</body>
+</html>

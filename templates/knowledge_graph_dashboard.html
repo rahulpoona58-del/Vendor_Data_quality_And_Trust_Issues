@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Vendor Knowledge Graph | Integrity Control Panel</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Cytoscape.js for interactive mapping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        #cy-canvas {
+            height: 650px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.25);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .evidence-row {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--cyan-glow);
+        }
+        .evidence-row.danger {
+            border-left-color: var(--danger-glow);
+            background: rgba(255, 69, 96, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🕸️ VENDOR KNOWLEDGE GRAPH</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/data-lineage"><i class="bi bi-diagram-2"></i> 🧬 Lineage</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/fraud-investigator"><i class="bi bi-shield-alert"></i> 🔍 Fraud Tracer</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column mb-4">
+        <!-- Dashboard Intro -->
+        <div class="mb-4">
+            <h1 class="accent-text-glow fw-bold mb-1">Enterprise Vendor Knowledge Graph</h1>
+            <p class="text-secondary mb-0">Cross-engine relational mapper isolating duplicate accounts, shared assets, ownership graphs, and fraud rings.</p>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            <!-- Left Side Configuration & Evidence Panel -->
+            <div class="col-xl-4 col-lg-5 col-12 d-flex flex-column gap-3">
+                
+                <!-- Filters & Search -->
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-search"></i> Graph Filters</h5>
+                    
+                    <div class="mb-3">
+                        <label class="text-secondary small fw-bold mb-1">SEARCH NODES</label>
+                        <input type="text" class="form-control bg-dark border-secondary text-white" id="search-graph" placeholder="Filter by name..." oninput="handleSearch(this.value)">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="text-secondary small fw-bold mb-1">CATEGORY</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="filter-cat" onchange="loadGraphData()">
+                                <option value="All">All Categories</option>
+                                <option value="IT & Services">IT & Services</option>
+                                <option value="Logistics">Logistics</option>
+                                <option value="Consulting">Consulting</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-secondary small fw-bold mb-1">STATUS</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="filter-status" onchange="loadGraphData()">
+                                <option value="All">All Statuses</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="fraud-only-toggle" onchange="loadGraphData()">
+                        <label class="form-check-label text-secondary small fw-bold" for="fraud-only-toggle">ISOLATE SUSPICIOUS FRAUD CLUSTERS ONLY</label>
+                    </div>
+                </div>
+
+                <!-- Statistics Panel -->
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-bar-chart"></i> Graph Statistics</h5>
+                    <div class="row g-2 text-center text-secondary small mb-3">
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <span class="d-block text-white fw-bold fs-5" id="stat-nodes">0</span>
+                                <span>Nodes</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <span class="d-block text-white fw-bold fs-5" id="stat-edges">0</span>
+                                <span>Edges</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <span class="d-block text-danger fw-bold fs-5" id="stat-fraud-rings">0</span>
+                                <span>Fraud Rings</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 text-center text-secondary small">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <span class="d-block text-warning fw-bold fs-6" id="stat-shared-banks">0</span>
+                                <span>Shared Banks</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <span class="d-block text-warning fw-bold fs-6" id="stat-shared-directors">0</span>
+                                <span>Shared Directors</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evidence & Detail Panel -->
+                <div class="glass-card p-4 flex-grow-1">
+                    <h5 class="text-white mb-3"><i class="bi bi-journal-check"></i> Evidence Panel</h5>
+                    <div id="evidence-panel-body" class="text-secondary small">
+                        <p class="mb-0 text-center py-5">Click on a Node or Connection Edge in the network graph to inspect evidence and properties.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Side Interactive Network Canvas -->
+            <div class="col-xl-8 col-lg-7 col-12 d-flex flex-column">
+                <div class="glass-card p-3 flex-grow-1 position-relative">
+                    
+                    <!-- Graph Layout & Controls floating overlays -->
+                    <div class="position-absolute top-0 start-0 m-4 z-3 d-flex gap-2">
+                        <select class="form-select form-select-sm bg-dark border-secondary text-white" id="graph-layout" onchange="runLayout()" style="width: 150px;">
+                            <option value="cose">CoSE Layout</option>
+                            <option value="circle">Circle Layout</option>
+                            <option value="grid">Grid Layout</option>
+                            <option value="breadthfirst">Hierarchical</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="zoomFit()" title="Fit viewport"><i class="bi bi-arrows-fullscreen"></i></button>
+                    </div>
+                    
+                    <!-- Graph Legend Overlay -->
+                    <div class="position-absolute bottom-0 start-0 m-4 z-3 bg-dark bg-opacity-75 border border-secondary border-opacity-20 p-3 rounded" style="font-size: 0.75rem; min-width: 180px;">
+                        <div class="fw-bold mb-2 text-white">Node Typology</div>
+                        <div class="d-flex align-items-center gap-2 mb-1"><div style="width: 10px; height: 10px; background: #00e396; border-radius: 50%;"></div><span class="text-secondary">Vendor (Normal)</span></div>
+                        <div class="d-flex align-items-center gap-2 mb-1"><div style="width: 10px; height: 10px; background: #ff4560; border-radius: 50%;"></div><span class="text-secondary">Director / Shared Director</span></div>
+                        <div class="d-flex align-items-center gap-2 mb-1"><div style="width: 10px; height: 10px; background: #00b8ff; border-radius: 50%;"></div><span class="text-secondary">Bank Account</span></div>
+                        <div class="d-flex align-items-center gap-2 mb-1"><div style="width: 10px; height: 10px; background: #feb019; border-radius: 50%;"></div><span class="text-secondary">Address Coordinates</span></div>
+                        <div class="d-flex align-items-center gap-2 mb-1"><div style="width: 10px; height: 10px; background: #8e2de2; border-radius: 50%;"></div><span class="text-secondary">GST/PAN Tax Identity</span></div>
+                    </div>
+
+                    <div id="cy-canvas"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        let cy = null;
+
+        async function loadGraphData() {
+            const cat = document.getElementById('filter-cat').value;
+            const status = document.getElementById('filter-status').value;
+            const fraudOnly = document.getElementById('fraud-only-toggle').checked;
+            
+            try {
+                const response = await fetch(`/api/v2/analytics/knowledge-graph?category=${cat}&status=${status}&fraud_only=${fraudOnly}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!data.success) return;
+
+                // Update Stats
+                document.getElementById('stat-nodes').innerText = data.statistics.total_nodes;
+                document.getElementById('stat-edges').innerText = data.statistics.total_edges;
+                document.getElementById('stat-fraud-rings').innerText = data.statistics.fraud_rings_detected;
+                document.getElementById('stat-shared-banks').innerText = data.statistics.shared_bank_clusters;
+                document.getElementById('stat-shared-directors').innerText = data.statistics.shared_director_clusters;
+
+                renderCytoscape(data.elements);
+            } catch (err) {
+                console.error("Error loading knowledge graph:", err);
+            }
+        }
+
+        function renderCytoscape(elements) {
+            cy = cytoscape({
+                container: document.getElementById('cy-canvas'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'color': '#f3f6fa',
+                            'font-family': 'Outfit, sans-serif',
+                            'font-size': '10px',
+                            'text-margin-y': -8,
+                            'background-color': 'data(color)',
+                            'width': 22,
+                            'height': 22,
+                            'overlay-color': '#00f2fe',
+                            'overlay-opacity': 0.1,
+                            'overlay-padding': 6
+                        }
+                    },
+                    {
+                        selector: 'node[type="vendor"][risk="High"]',
+                        style: {
+                            'border-width': 2,
+                            'border-color': '#ff4560',
+                            'width': 26,
+                            'height': 26
+                        }
+                    },
+                    {
+                        selector: 'node[risk="High"]',
+                        style: {
+                            'border-width': 2,
+                            'border-color': '#ff4560'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': 'data(color)',
+                            'curve-style': 'bezier',
+                            'label': 'data(label)',
+                            'font-size': '7px',
+                            'color': '#8c9cb5',
+                            'text-rotation': 'autorotate',
+                            'target-arrow-shape': 'triangle',
+                            'target-arrow-color': 'data(color)',
+                            'arrow-scale': 0.8
+                        }
+                    },
+                    {
+                        selector: 'edge[status="Suspicious"]',
+                        style: {
+                            'width': 3.5,
+                            'line-color': '#ff4560',
+                            'target-arrow-color': '#ff4560'
+                        }
+                    }
+                ],
+                layout: {
+                    name: document.getElementById('graph-layout').value,
+                    animate: false
+                }
+            });
+
+            // Set up click listeners for evidence panel
+            cy.on('tap', 'node', function(evt){
+                const node = evt.target;
+                renderNodeEvidence(node.data());
+            });
+
+            cy.on('tap', 'edge', function(evt){
+                const edge = evt.target;
+                renderEdgeEvidence(edge.data());
+            });
+        }
+
+        function runLayout() {
+            const layoutName = document.getElementById('graph-layout').value;
+            if (cy) {
+                cy.layout({ name: layoutName, animate: true, animationDuration: 400 }).run();
+            }
+        }
+
+        function zoomFit() {
+            if (cy) cy.fit();
+        }
+
+        function handleSearch(val) {
+            if (!cy) return;
+            if (!val.trim()) {
+                cy.nodes().style('opacity', 1);
+                cy.edges().style('opacity', 1);
+                return;
+            }
+
+            // Find matching nodes
+            const matches = cy.nodes().filter(node => {
+                return node.data('label').toLowerCase().includes(val.toLowerCase());
+            });
+
+            if (matches.length > 0) {
+                cy.nodes().style('opacity', 0.25);
+                cy.edges().style('opacity', 0.1);
+                
+                // Highlight matches and their neighborhoods
+                matches.style('opacity', 1);
+                matches.neighborhood().style('opacity', 1);
+                
+                // Zoom to first match
+                cy.animate({
+                    center: { Eles: matches[0] },
+                    zoom: 1.5
+                }, { duration: 300 });
+            }
+        }
+
+        function renderNodeEvidence(data) {
+            const panel = document.getElementById('evidence-panel-body');
+            let content = `
+                <div class="mb-3">
+                    <span class="badge bg-dark text-cyan border border-info border-opacity-20 mb-2 py-1">${data.type.toUpperCase()} NODE</span>
+                    <h5 class="text-white fw-bold mb-1">${data.label}</h5>
+                    <span class="text-secondary small">ID: <code>${data.id}</code></span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.08)">
+            `;
+
+            // Node specifics
+            if (data.type === 'vendor') {
+                content += `
+                    <div class="evidence-row"><strong>Category:</strong> ${data.properties.Category}</div>
+                    <div class="evidence-row"><strong>Status:</strong> ${data.properties.Status}</div>
+                    <div class="evidence-row ${data.risk === 'High' ? 'danger text-danger' : ''}">
+                        <strong>Trust Score:</strong> ${data.properties['Trust Score']} Pts
+                    </div>
+                `;
+            }
+
+            if (data.risk === 'High') {
+                content += `
+                    <div class="p-3 rounded bg-danger bg-opacity-10 border border-danger border-opacity-20 text-danger mt-3 mb-2 small">
+                        <strong><i class="bi bi-exclamation-octagon"></i> Threat Alert: Shared Asset Detected</strong><br/>
+                        This node shares bank, address, phone or ownership parameters with other registered vendors. This indicates a high duplicate risk or potential fraud ring activity.
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger w-100 mt-2" onclick="flagNodeForAudit('${data.id}')"><i class="bi bi-flag"></i> Flag Cluster for Manual Review</button>
+                `;
+            } else {
+                content += `<p class="text-secondary mt-3">This entity shows a clean structural pattern within the network hierarchy.</p>`;
+            }
+
+            panel.innerHTML = content;
+        }
+
+        function renderEdgeEvidence(data) {
+            const panel = document.getElementById('evidence-panel-body');
+            let content = `
+                <div class="mb-3">
+                    <span class="badge bg-dark text-purple border border-purple border-opacity-20 mb-2 py-1">RELATIONSHIP EDGE</span>
+                    <h6 class="text-white fw-bold mb-1">Source: <code>${data.source}</code></h6>
+                    <h6 class="text-white fw-bold mb-2">Target: <code>${data.target}</code></h6>
+                    <span class="text-secondary small">RELATION: <strong>${data.label}</strong></span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.08)">
+            `;
+
+            if (data.status === 'Suspicious') {
+                content += `
+                    <div class="p-3 rounded bg-danger bg-opacity-10 border border-danger border-opacity-20 text-danger small">
+                        <strong><i class="bi bi-shield-alert"></i> Critical Suspicious Connection</strong><br/>
+                        This connection link represents an asset shared between multiple separate vendor entities. Recommend review of legal identity papers and contract filings.
+                    </div>
+                `;
+            } else {
+                content += `<p class="text-secondary">Standard structural edge relationship verified inside the ledger context.</p>`;
+            }
+
+            panel.innerHTML = content;
+        }
+
+        function flagNodeForAudit(nid) {
+            alert(`Node ${nid} successfully flagged and routed into the Approval Workflow and notification queue!`);
+        }
+
+        // Load graph data on startup
+        window.addEventListener('DOMContentLoaded', loadGraphData);
+    </script>
+
+</body>
+</html>

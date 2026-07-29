@@ -1,80 +1,2495 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Dashboard</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Command Center - Vendor Analytics</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+        }
+
         body {
-            background: linear-gradient(to right, #43e97b, #38f9d7);
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
         }
 
-        .table-hover tbody tr:hover {
-            background-color: #d1f7c4;
-            transform: scale(1.01);
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .card {
-            border-radius: 15px;
+        .glass-card:hover {
+            border-color: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 242, 254, 0.05);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .role-pill {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .role-pill.active {
+            background: linear-gradient(45deg, var(--purple-glow), var(--cyan-glow));
+            color: white;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        }
+
+        .kpi-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-top: 5px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .table-custom {
+            color: var(--text-main);
+            border-color: rgba(255,255,255,0.05);
+        }
+
+        .table-custom th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom-width: 2px;
+        }
+
+        .table-custom tr {
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .table-custom tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-tabs-custom .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            background: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-tabs-custom .nav-link.active {
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--cyan-glow);
+            box-shadow: inset 0 -2px 0 var(--cyan-glow);
+        }
+
+        .btn-custom-cyan {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            border: none;
+            color: #0b0f19;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2);
+            transition: all 0.2s;
+        }
+
+        .btn-custom-cyan:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3);
+            color: #0b0f19;
         }
     </style>
 </head>
-
 <body>
 
 <div class="container mt-5">
+    
+    <!-- Executive Command Center Header Area -->
+    <div class="glass-card p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center">
+            <span class="text-white me-3 fw-bold">🎮 Command Access Level:</span>
+            <div id="role-container" class="d-flex gap-2">
+                <span class="role-pill active" onclick="switchRole('admin@system.local', 'admin123', this)">Admin</span>
+                <span class="role-pill" onclick="switchRole('steward@system.local', 'steward123', this)">Data Steward</span>
+                <span class="role-pill" onclick="switchRole('auditor@system.local', 'auditor123', this)">Auditor</span>
+                <span class="role-pill" onclick="switchRole('manager@system.local', 'manager123', this)">Manager</span>
+                <span class="role-pill" onclick="switchRole('viewer@system.local', 'viewer123', this)">Viewer</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="/semantic-search" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-search"></i> 🔍 Semantic Search</a>
+            <a href="/command-center" class="btn btn-warning btn-sm text-dark fw-bold"><i class="bi bi-shield-shaded"></i> 🛡️ Intelligence Command Center</a>
+            <a href="/investigator-workspace" class="btn btn-danger btn-sm fw-bold"><i class="bi bi-person-bounding-box"></i> 💼 AI Investigator</a>
+            <a href="/digital-twin" class="btn btn-info btn-sm text-dark fw-bold"><i class="bi bi-person-workspace"></i> ♊ Digital Twin</a>
+            <a href="/what-if-simulator" class="btn btn-warning btn-sm text-dark fw-bold"><i class="bi bi-sliders"></i> 🛠️ What-If Simulator</a>
+            <a href="/reputation-console" class="btn btn-success btn-sm fw-bold"><i class="bi bi-shield-shaded"></i> 🛡️ Reputation</a>
+            <a href="/anomaly-investigator" class="btn btn-danger btn-sm fw-bold"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomaly Tracer</a>
+            <a href="/data-lineage" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-diagram-2"></i> 🧬 Data Lineage</a>
+            <a href="/fraud-investigator" class="btn btn-warning btn-sm text-dark fw-bold"><i class="bi bi-shield-alert"></i> 🔍 Fraud Tracer</a>
+            <a href="/knowledge-graph" class="btn btn-danger btn-sm fw-bold"><i class="bi bi-diagram-3"></i> 🕸️ Knowledge Graph</a>
+            <a href="/vendor-360" class="btn btn-success btn-sm fw-bold"><i class="bi bi-person-bounding-box"></i> 🏢 Vendor 360</a>
+            <a href="/xai-dashboard" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-cpu"></i> 🔬 Explainable AI</a>
+            <a href="/geographic-analytics" class="btn btn-warning btn-sm text-dark fw-bold"><i class="bi bi-globe"></i> 🗺️ Geographic GIS Analytics</a>
+            <a href="/executive-dashboard" class="btn btn-info btn-sm text-dark fw-bold"><i class="bi bi-speedometer2"></i> 📊 Executive KPI Dashboard</a>
+            <a href="/" class="btn btn-outline-secondary btn-sm">⬅ Control Panel</a>
+        </div>
+    </div>
 
-    <div class="card shadow p-4">
+    <div class="text-center mb-5">
+        <h1 class="display-5 font-weight-bold accent-text-glow fw-bold">EXECUTIVE COMMAND CENTER</h1>
+        <p class="text-secondary small">Real-time Multi-Dimensional Vendor Operations & Integrity Dashboard</p>
+    </div>
 
-        <h2 class="text-center mb-4">📊 Vendor Dashboard</h2>
+    <!-- KPIs Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="glass-card kpi-card">
+                <span class="text-secondary small">TOTAL ACTIVE VENDORS</span>
+                <div class="kpi-value text-white" id="kpi-total">--</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card kpi-card">
+                <span class="text-secondary small">AVERAGE TRUST INDEX</span>
+                <div class="kpi-value text-info" id="kpi-trust">--</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card kpi-card">
+                <span class="text-secondary small">CRITICAL FRAUD ALERTS</span>
+                <div class="kpi-value text-danger" id="kpi-fraud">--</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card kpi-card">
+                <span class="text-secondary small">AVERAGE COMPLIANCE RATE</span>
+                <div class="kpi-value text-success" id="kpi-compliance">--</div>
+            </div>
+        </div>
+    </div>
 
-        <input type="text" id="search" class="form-control mb-3" placeholder="🔍 Search vendor..." onkeyup="filterTable()">
+    <!-- Analytics Dashboard Navigation Tabs -->
+    <div class="glass-card p-4 mb-4">
+        <ul class="nav nav-tabs nav-tabs-custom mb-4" id="analyticsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">📈 Growth & Mapping</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="risk-tab" data-bs-toggle="tab" data-bs-target="#risk" type="button" role="tab">⚠️ Risk Controls</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="health-tab" data-bs-toggle="tab" data-bs-target="#health-tab-content" type="button" role="tab" onclick="loadHealthIndexTab()">🩺 Health Index</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="predictions-tab" data-bs-toggle="tab" data-bs-target="#predictions" type="button" role="tab">🤖 Predictive Trajectory</button>
+            </li>
+            <li class="nav-item d-none" id="audit-tab-header" role="presentation">
+                <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab" onclick="loadAuditLogs()">🔍 System Audit Trail</button>
+            </li>
+            <li class="nav-item d-none" id="rules-tab-header" role="presentation">
+                <button class="nav-link" id="rules-tab" data-bs-toggle="tab" data-bs-target="#rules" type="button" role="tab" onclick="loadBusinessRules()">⚙️ Rules Engine</button>
+            </li>
+        </ul>
 
-        <table class="table table-hover table-bordered text-center">
-            <tr class="table-dark">
-                <th>ID</th>
-                <th>Name</th>
-                <th>Score</th>
-                <th>Level</th>
-            </tr>
+        <div class="tab-content" id="analyticsTabsContent">
+            <!-- Tab 1: Growth Overview & Scatter Plot -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <span class="text-secondary small d-block mb-2">CUMULATIVE VENDOR REGISTRATION GROWTH</span>
+                        <div id="growth-line-chart"></div>
+                    </div>
+                    <div class="col-lg-6">
+                        <span class="text-secondary small d-block mb-2">MULTI-DIMENSIONAL INTEGRITY PLOT (Trust vs Risk)</span>
+                        <div id="integrity-scatter-chart"></div>
+                    </div>
+                </div>
+            </div>
 
-            {% for v in vendors %}
-            <tr>
-                <td>{{ v.vendor_id }}</td>
-                <td>{{ v.vendor_name }}</td>
-                <td>{{ v.trust_score }}</td>
-                <td>
-                    <span class="badge 
-                        {% if v.trust_level == 'High Trust' %}bg-success
-                        {% elif v.trust_level == 'Medium Trust' %}bg-warning
-                        {% else %}bg-danger{% endif %}">
-                        {{ v.trust_level }}
-                    </span>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+            <!-- Tab 2: Risk Heatmap & Fraud Analysis -->
+            <div class="tab-pane fade" id="risk" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <span class="text-secondary small d-block mb-2">COMPLIANCE VS FRAUD CONTROL HEATMAP</span>
+                        <div id="risk-heatmap-chart"></div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <h5 class="text-white mb-3">Duplicate Asset & Cluster Analysis</h5>
+                            <p class="text-secondary small">The matrix tracks shared address coordinates, matching tax registers, and bank proofs across the registry.</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm text-white" style="font-size: 0.8rem;">
+                                    <thead>
+                                        <tr class="text-secondary">
+                                            <th>Cluster Type</th>
+                                            <th>Matched Count</th>
+                                            <th>Critical Score Impact</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Matching GST Identifiers</td>
+                                            <td><span class="badge bg-danger">Critical</span></td>
+                                            <td class="text-danger fw-bold">-25 Pts</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Matching Bank Proofs</td>
+                                            <td><span class="badge bg-warning text-dark">High</span></td>
+                                            <td class="text-warning fw-bold">-20 Pts</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Overlapping Locations</td>
+                                            <td><span class="badge bg-secondary">Medium</span></td>
+                                            <td class="text-secondary fw-bold">-10 Pts</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="text-center mt-3">
-            <a href="/" class="btn btn-dark">⬅ Back</a>
+            <!-- Tab 6: Vendor Health Index -->
+            <div class="tab-pane fade" id="health-tab-content" role="tabpanel">
+                <div class="row g-4">
+                    <!-- Donut chart for Health Category distribution -->
+                    <div class="col-lg-6">
+                        <span class="text-secondary small d-block mb-2">REGISTRY HEALTH INDEX DISTRIBUTION</span>
+                        <div id="health-distribution-chart"></div>
+                    </div>
+                    
+                    <!-- Health score advisory text / summaries -->
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <h5 class="text-white mb-3">Health Category Breakdown & Thresholds</h5>
+                            <p class="text-secondary small">Health scores are dynamically aggregated based on Trust, Compliance, Quality Rating, Fraud threats, and timeline activity logs.</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm text-white" style="font-size: 0.8rem;">
+                                    <thead>
+                                        <tr class="text-secondary">
+                                            <th>Health Category</th>
+                                            <th>Score Bounds</th>
+                                            <th>Registered Vendors</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge bg-success">Excellent</span></td>
+                                            <td><code>90 - 100 Pts</code></td>
+                                            <td id="health-count-excellent">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-info">Good</span></td>
+                                            <td><code>75 - 89 Pts</code></td>
+                                            <td id="health-count-good">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-warning text-dark">Average</span></td>
+                                            <td><code>55 - 74 Pts</code></td>
+                                            <td id="health-count-average">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-danger">Poor</span></td>
+                                            <td><code>35 - 54 Pts</code></td>
+                                            <td id="health-count-poor">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-danger">Critical</span></td>
+                                            <td><code>0 - 34 Pts</code></td>
+                                            <td id="health-count-critical">--</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Predictive Forecasting -->
+            <div class="tab-pane fade" id="predictions" role="tabpanel">
+                <div class="row g-4">
+                    <!-- Forecast trajectory multi-series chart -->
+                    <div class="col-lg-8">
+                        <span class="text-secondary small d-block mb-2">PREDICTIVE SCORE TRAJECTORY (6-Month Forecast)</span>
+                        <div id="predictive-trajectory-chart"></div>
+                    </div>
+                    
+                    <!-- Threat Vectors circular radial bar gauges -->
+                    <div class="col-lg-4">
+                        <div class="p-3 rounded h-100" style="background: rgba(0,0,0,0.15);">
+                            <h6 class="text-white mb-3">Threat & Probability Vectors</h6>
+                            <div class="d-flex flex-column gap-3 align-items-center justify-content-center pt-2">
+                                <div class="w-100 text-start">
+                                    <span class="text-secondary small d-block mb-1">Compliance Failure Probability</span>
+                                    <div class="progress" style="height: 10px; background: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-warning" id="gauge-comp-fail" style="width: 0%">0%</div>
+                                    </div>
+                                </div>
+                                <div class="w-100 text-start">
+                                    <span class="text-secondary small d-block mb-1">Fraud Probability Index</span>
+                                    <div class="progress" style="height: 10px; background: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-danger" id="gauge-fraud-prob" style="width: 0%">0%</div>
+                                    </div>
+                                </div>
+                                <div class="w-100 text-start">
+                                    <span class="text-secondary small d-block mb-1">Duplicate Overlap Ratio</span>
+                                    <div class="progress" style="height: 10px; background: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-info" id="gauge-dup-overlap" style="width: 0%">0%</div>
+                                    </div>
+                                </div>
+                                <div class="w-100 text-center mt-2 border-top border-secondary border-opacity-10 pt-2">
+                                    <span class="text-secondary small">Prediction Confidence score:</span>
+                                    <span class="badge bg-success" id="pred-confidence-badge">92.5%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Advisory & Expiring Credentials block -->
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(0,0,0,0.15);">
+                            <h6 class="text-white mb-2">Upcoming Document Expiries (Next 90 Days)</h6>
+                            <div class="table-responsive" style="max-height: 150px; overflow-y: auto;">
+                                <table class="table table-sm text-white" style="font-size: 0.75rem;">
+                                    <thead>
+                                        <tr class="text-secondary">
+                                            <th>Document</th>
+                                            <th>Vendor ID</th>
+                                            <th>Days Left</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="predictive-expiries-rows">
+                                        <tr><td colspan="3" class="text-center text-secondary">None expiring.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(0,0,0,0.15);">
+                            <h6 class="text-white mb-2">Actionable Threat Advisories</h6>
+                            <div id="predictive-advisories" style="max-height: 150px; overflow-y: auto; font-size: 0.75rem;">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 7: Report Center -->
+            <div class="tab-pane fade" id="reports-tab-content" role="tabpanel">
+                <div class="row g-4">
+                    <!-- Generation Form -->
+                    <div class="col-lg-4">
+                        <div class="p-4 rounded h-100" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <h5 class="text-white mb-3 accent-text-glow">Generate Real-Time Report</h5>
+                            <div class="mb-3">
+                                <label class="text-secondary small d-block mb-1">Select Report Scope</label>
+                                <select id="report-type-select" class="form-select bg-dark text-white border-secondary">
+                                    <option value="Vendor Summary">Vendor Summary</option>
+                                    <option value="Vendor Quality Report">Vendor Quality Report</option>
+                                    <option value="Trust Report">Trust Report</option>
+                                    <option value="Risk Report">Risk Report</option>
+                                    <option value="Compliance Report">Compliance Report</option>
+                                    <option value="Fraud Report">Fraud Report</option>
+                                    <option value="Executive Dashboard Report">Executive Dashboard Report</option>
+                                    <option value="Monthly Report">Monthly Report</option>
+                                    <option value="Yearly Report">Yearly Report</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-secondary small d-block mb-1">Export Format</label>
+                                <select id="report-format-select" class="form-select bg-dark text-white border-secondary">
+                                    <option value="HTML">Printable HTML / Save PDF</option>
+                                    <option value="Excel">Excel Spreadsheet</option>
+                                    <option value="CSV">Comma Separated (CSV)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-custom-cyan w-100 mt-2" onclick="triggerReportGeneration()">📥 Generate & Download</button>
+                        </div>
+                    </div>
+
+                    <!-- Scheduled Reports Config -->
+                    <div class="col-lg-8">
+                        <div class="p-4 rounded" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05); min-height: 250px;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="text-white mb-0 accent-text-glow">Scheduled Automated Exports</h5>
+                                <button class="btn btn-sm btn-outline-info" onclick="openScheduleReportModal()">+ Configure Schedule</button>
+                            </div>
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-custom text-center align-middle" style="font-size:0.8rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Report Type</th>
+                                            <th>Frequency</th>
+                                            <th>Format</th>
+                                            <th>Recipient</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-schedules-rows">
+                                        <tr><td colspan="6" class="text-center text-secondary">No automated schedules configured.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Execution History -->
+                    <div class="col-lg-12">
+                        <div class="p-4 rounded" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <h5 class="text-white mb-3 accent-text-glow">Report Generation Log</h5>
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-custom text-center align-middle" style="font-size:0.8rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Report Type</th>
+                                            <th>Format</th>
+                                            <th>Generated By</th>
+                                            <th>Status</th>
+                                            <th>Filename</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-history-rows">
+                                        <tr><td colspan="6" class="text-center text-secondary">No recent reports logged.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: System Audit Trail -->
+            <div class="tab-pane fade" id="audit" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <span class="text-secondary small">SYSTEM OVERRIDES TRANSACTION REGISTRY</span>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-sm btn-outline-info" onclick="exportAuditTrail('json')">Export JSON</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="exportAuditTrail('csv')">Export CSV</button>
+                    </div>
+                </div>
+
+                <!-- Audit Filters -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <input type="text" id="audit-search" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="🔍 Search performed by, action type, reason..." oninput="loadAuditLogs()">
+                    </div>
+                    <div class="col-md-2">
+                        <select id="audit-module-filter" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="loadAuditLogs()">
+                            <option value="All">All Modules</option>
+                            <option value="Auth">Auth</option>
+                            <option value="Document">Document</option>
+                            <option value="Fraud">Fraud</option>
+                            <option value="Compliance">Compliance</option>
+                            <option value="Recommendation">Recommendation</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="audit-start-date" class="form-control form-control-sm bg-dark text-white border-secondary" onchange="loadAuditLogs()">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="audit-end-date" class="form-control form-control-sm bg-dark text-white border-secondary" onchange="loadAuditLogs()">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-sm btn-custom-cyan w-100" style="font-size:0.75rem" onclick="clearAuditFilters()">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Audit Log Listing -->
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-custom text-center align-middle" style="font-size:0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Performed By</th>
+                                <th>IP Address</th>
+                                <th>Action Type</th>
+                                <th>Module</th>
+                                <th>Reason</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-log-rows">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 5: Configurable Business Rules Engine -->
+            <div class="tab-pane fade" id="rules" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <span class="text-secondary small">DYNAMIC LOGIC RULES REGISTRY</span>
+                    <button class="btn btn-sm btn-custom-cyan" onclick="openCreateRuleModal()">+ Add Custom Rule</button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-custom text-center align-middle" style="font-size:0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Priority</th>
+                                <th>Name</th>
+                                <th>Group</th>
+                                <th>Condition logic</th>
+                                <th>Action Details</th>
+                                <th>Enabled</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="business-rules-rows">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Registry List -->
+    <div class="glass-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h3 class="accent-text-glow font-weight-bold mb-0">Active Vendor Registry</h3>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-info" onclick="exportRegistry('json')">Export JSON</button>
+                <button class="btn btn-sm btn-outline-success" onclick="exportRegistry('csv')">Export CSV</button>
+            </div>
         </div>
 
+        <div class="row g-2 mb-3">
+            <div class="col-md-5 position-relative">
+                <input type="text" id="search-input" class="form-control bg-dark text-white border-secondary" placeholder="🔍 Enter keyword or NLP (e.g. 'Show duplicate vendors')" oninput="onSearchInput()" onkeydown="onSearchKeydown(event)" autocomplete="off">
+                <div id="autocomplete-suggestions" class="position-absolute w-100 glass-card p-2 d-none" style="z-index: 1000; top: 45px; background-color: #0b0f19; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></div>
+            </div>
+            <div class="col-md-2">
+                <select id="filter-trust-level" class="form-select bg-dark text-white border-secondary" onchange="triggerSmartSearch()">
+                    <option value="All">All Trust Levels</option>
+                    <option value="High Trust">High Trust Only</option>
+                    <option value="Medium Trust">Medium Trust Only</option>
+                    <option value="Low Trust">Low Trust Only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="sort-by-select" class="form-select bg-dark text-white border-secondary" onchange="triggerSmartSearch()">
+                    <option value="trust_score">Sort by Trust Score</option>
+                    <option value="quality_rating">Sort by Quality Score</option>
+                    <option value="name">Sort by Vendor Name</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="sort-order-select" class="form-select bg-dark text-white border-secondary" onchange="triggerSmartSearch()">
+                    <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-custom-cyan w-100" onclick="triggerSmartSearch()">Search</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom text-center align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Business Name</th>
+                        <th>Quality Score</th>
+                        <th>Trust Index</th>
+                        <th>Health Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="registry-rows">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <span class="text-secondary small" id="search-total-summary">Showing 0 vendors</span>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" id="btn-prev-page" onclick="changeSearchPage(-1)" disabled>Previous</button>
+                <button class="btn btn-outline-secondary" id="btn-next-page" onclick="changeSearchPage(1)" disabled>Next</button>
+            </div>
+        </div>
     </div>
 
 </div>
 
 <script>
-function filterTable() {
-    let input = document.getElementById("search").value.toLowerCase();
-    let rows = document.querySelectorAll("table tr");
+    let token = "";
+    let activeRole = "Admin";
+    let registryData = [];
+    
+    // ApexCharts Instances
+    let growthChart = null;
+    let scatterChart = null;
+    let heatmapChart = null;
+    let predictionChart = null;
+    let healthChart = null;
 
-    rows.forEach((row, i) => {
-        if(i === 0) return;
-        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
+    async function switchRole(email, password, element) {
+        document.querySelectorAll('.role-pill').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        
+        // Dynamic authentication simulation
+        await autoLogin(email, password);
+        loadDashboardData();
+    }
+
+    async function autoLogin(email, password) {
+        try {
+            const response = await fetch('/api/v2/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                token = data.access_token;
+                localStorage.setItem('dashboard_token', token);
+                
+                // Decode token payload to resolve role
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const claims = JSON.parse(jsonPayload);
+                activeRole = claims.role;
+                localStorage.setItem('current_role', activeRole);
+            }
+        } catch (err) {
+            console.error("Auth simulation failed:", err);
+        }
+    }
+
+    let searchPage = 1;
+    let searchLimit = 10;
+
+    async function loadDashboardData() {
+        if (!token) return;
+        
+        try {
+            const response = await fetch('/api/v2/analytics/telemetry', {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            
+            // 1. Render KPIs
+            document.getElementById('kpi-total').innerText = data.kpis.total_vendors;
+            document.getElementById('kpi-trust').innerText = `${data.kpis.avg_trust_score} / 100`;
+            document.getElementById('kpi-fraud').innerText = data.kpis.active_fraud_alerts;
+            document.getElementById('kpi-compliance').innerText = `${data.kpis.avg_compliance_score.toFixed(0)}%`;
+            
+            // 2. Render Charts
+            renderGrowthChart(data.growth);
+            renderScatterChart(data.scatter);
+            renderHeatmapChart(data.scatter);
+            
+            // Call Predictive Analytics Engine
+            loadPredictiveAnalytics();
+            
+            // 3. Trigger Smart Search
+            triggerSmartSearch();
+        } catch (err) {
+            console.error("Error loading dashboard data:", err);
+        }
+    }
+
+    async function triggerSmartSearch() {
+        if (!token) return;
+        
+        try {
+            const query = document.getElementById('search-input').value;
+            const trustLevel = document.getElementById('filter-trust-level').value;
+            const sortBy = document.getElementById('sort-by-select').value;
+            const sortOrder = document.getElementById('sort-order-select').value;
+            
+            let url = `/api/v2/search?query=${encodeURIComponent(query)}&page=${searchPage}&limit=${searchLimit}&sort_by=${sortBy}&order=${sortOrder}`;
+            if (trustLevel !== 'All') {
+                url += `&trust_level=${encodeURIComponent(trustLevel)}`;
+            }
+            
+            const response = await fetch(url, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                registryData = data.results || [];
+                renderRegistryTable(registryData);
+                
+                // Update pagination layout
+                const total = data.total || 0;
+                const start = total === 0 ? 0 : (searchPage - 1) * searchLimit + 1;
+                const end = Math.min(total, searchPage * searchLimit);
+                document.getElementById('search-total-summary').innerText = `Showing ${start} - ${end} of ${total} vendors`;
+                
+                document.getElementById('btn-prev-page').disabled = searchPage <= 1;
+                document.getElementById('btn-next-page').disabled = end >= total;
+            }
+        } catch (err) {
+            console.error("Error executing smart search:", err);
+        }
+    }
+
+    function changeSearchPage(delta) {
+        searchPage += delta;
+        triggerSmartSearch();
+    }
+
+    async function onSearchInput() {
+        if (!token) return;
+        const prefix = document.getElementById('search-input').value;
+        const container = document.getElementById('autocomplete-suggestions');
+        
+        if (prefix.trim().length === 0) {
+            container.classList.add('d-none');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v2/search/autocomplete?prefix=${encodeURIComponent(prefix)}`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            const suggestions = data.suggestions || [];
+            
+            if (suggestions.length === 0) {
+                container.classList.add('d-none');
+                return;
+            }
+            
+            container.innerHTML = "";
+            container.classList.remove('d-none');
+            
+            suggestions.forEach(s => {
+                const div = document.createElement('div');
+                div.className = "p-2 hover-bg-dark text-white rounded cursor-pointer text-start";
+                div.style.cursor = "pointer";
+                div.style.fontSize = "0.8rem";
+                div.innerHTML = s.type === 'template' ? `💡 <em>${s.text}</em>` : `🏢 <strong>${s.text}</strong>`;
+                div.onclick = () => {
+                    document.getElementById('search-input').value = s.text;
+                    container.classList.add('d-none');
+                    searchPage = 1;
+                    triggerSmartSearch();
+                };
+                container.appendChild(div);
+            });
+        } catch (err) {
+            console.error("Autocomplete failure:", err);
+        }
+    }
+
+    function onSearchKeydown(event) {
+        if (event.key === 'Enter') {
+            document.getElementById('autocomplete-suggestions').classList.add('d-none');
+            searchPage = 1;
+            triggerSmartSearch();
+        }
+    }
+
+    // Dismiss suggestions on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#search-input') && !e.target.closest('#autocomplete-suggestions')) {
+            document.getElementById('autocomplete-suggestions').classList.add('d-none');
+        }
     });
-}
+
+    function renderRegistryTable(dataList) {
+        const tbody = document.getElementById('registry-rows');
+        tbody.innerHTML = "";
+        
+        if (dataList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-3">No vendors registered.</td></tr>`;
+            return;
+        }
+        
+        dataList.forEach(v => {
+            let trustVal = v.trust !== undefined ? v.trust : v.trust_score;
+            let qualityVal = v.quality !== undefined ? v.quality : v.quality_rating * 20;
+
+            let tBadge = 'bg-secondary';
+            if (trustVal >= 75.0) tBadge = 'bg-success';
+            else if (trustVal >= 45.0) tBadge = 'bg-warning text-dark';
+            else tBadge = 'bg-danger';
+
+            // Compute Health Index dynamically for display
+            let riskVal = v.risk !== undefined ? v.risk : (100.0 - trustVal);
+            let compVal = v.compliance !== undefined ? v.compliance : 85.0;
+            let fraudVal = v.fraud !== undefined ? v.fraud : 0.0;
+            
+            let hScore = (
+                (trustVal * 0.20) +
+                (compVal * 0.20) +
+                (qualityVal * 0.15) +
+                ((100.0 - riskVal) * 0.15) +
+                ((100.0 - fraudVal) * 0.15) +
+                (80.0 * 0.10) +
+                (70.0 * 0.05)
+            );
+            
+            let hCat = "Excellent";
+            let hBadgeClass = "bg-success";
+            if (hScore >= 90.0) { hCat = "Excellent"; hBadgeClass = "bg-success"; }
+            else if (hScore >= 75.0) { hCat = "Good"; hBadgeClass = "bg-info"; }
+            else if (hScore >= 55.0) { hCat = "Average"; hBadgeClass = "bg-warning text-dark"; }
+            else if (hScore >= 35.0) { hCat = "Poor"; hBadgeClass = "bg-danger"; }
+            else { hCat = "Critical"; hBadgeClass = "bg-danger"; }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${v.id}</strong></td>
+                <td>${v.name}</td>
+                <td>
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="progress" style="width: 80px; height: 6px; background: rgba(255,255,255,0.05);">
+                            <div class="progress-bar bg-info" style="width: ${qualityVal}%"></div>
+                        </div>
+                        <span>${(qualityVal / 20).toFixed(1)} / 5.0</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${tBadge}">${trustVal.toFixed(0)} Pts</span>
+                </td>
+                <td>
+                    <span class="badge ${hBadgeClass}">${hCat} (${hScore.toFixed(0)}%)</span>
+                </td>
+                <td>
+                    <a href="/result/${v.id}" class="btn btn-xs btn-custom-cyan px-3 py-1 text-decoration-none" style="font-size:0.75rem;">Drill Down Profile</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+
+    function exportRegistry(format) {
+        if (registryData.length === 0) {
+            alert("No registry data found to export.");
+            return;
+        }
+
+        let content = "";
+        let filename = `vendor_registry_export`;
+        
+        if (format === 'json') {
+            content = JSON.stringify(registryData, null, 2);
+            filename += ".json";
+            downloadFile(content, 'application/json', filename);
+        } else if (format === 'csv') {
+            filename += ".csv";
+            let csv = "ID,Name,Trust Score,Risk Score,Compliance Score,Fraud Score,Quality Rating\n";
+            registryData.forEach(v => {
+                const nameEscaped = v.name.replace(/"/g, '""');
+                csv += `"${v.id}","${nameEscaped}","${v.trust}","${v.risk}","${v.compliance}","${v.fraud}","${(v.quality/20).toFixed(1)}"\n`;
+            });
+            downloadFile(csv, 'text/csv', filename);
+        }
+    }
+
+    function downloadFile(content, mimeType, filename) {
+        const blob = new Blob([content], { type: mimeType });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Chart Render Functions
+    function renderGrowthChart(growthData) {
+        const options = {
+            series: [{
+                name: "Cumulative Growth",
+                data: growthData.values
+            }],
+            chart: {
+                height: 250,
+                type: 'line',
+                foreColor: '#8c9cb5',
+                toolbar: { show: false }
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3,
+                colors: ['#00f2fe']
+            },
+            grid: {
+                borderColor: 'rgba(255, 255, 255, 0.05)'
+            },
+            xaxis: {
+                categories: growthData.labels
+            },
+            theme: { mode: 'dark' }
+        };
+
+        if (growthChart) growthChart.destroy();
+        growthChart = new ApexCharts(document.querySelector("#growth-line-chart"), options);
+        growthChart.render();
+    }
+
+    function renderScatterChart(scatterData) {
+        const seriesData = scatterData.map(v => ({
+            x: v.trust,
+            y: v.risk,
+            name: v.name
+        }));
+
+        const options = {
+            series: [{
+                name: 'Vendor Coordinates',
+                data: seriesData
+            }],
+            chart: {
+                height: 250,
+                type: 'scatter',
+                foreColor: '#8c9cb5',
+                toolbar: { show: false }
+            },
+            xaxis: {
+                tickAmount: 10,
+                title: { text: 'Trust Score' }
+            },
+            yaxis: {
+                tickAmount: 10,
+                title: { text: 'Risk Score' }
+            },
+            grid: {
+                borderColor: 'rgba(255, 255, 255, 0.05)'
+            },
+            tooltip: {
+                custom: function({series, seriesIndex, dataPointIndex, w}) {
+                    var data = w.config.series[seriesIndex].data[dataPointIndex];
+                    return '<div class="p-2" style="background:#0b0f19; border: 1px solid rgba(255,255,255,0.1)">' +
+                        '<strong>' + data.name + '</strong><br/>' +
+                        'Trust: ' + data.x + ' Pts<br/>' +
+                        'Risk: ' + data.y + '%<br/>' +
+                        '</div>';
+                }
+            },
+            theme: { mode: 'dark' }
+        };
+
+        if (scatterChart) scatterChart.destroy();
+        scatterChart = new ApexCharts(document.querySelector("#integrity-scatter-chart"), options);
+        scatterChart.render();
+    }
+
+    function renderHeatmapChart(scatterData) {
+        // Generate heat map grid based on Compliance vs Fraud
+        const options = {
+            series: [{
+                name: 'High Fraud Score',
+                data: scatterData.map(v => ({ x: v.name, y: v.fraud }))
+            }, {
+                name: 'Low Compliance Score',
+                data: scatterData.map(v => ({ x: v.name, y: 100 - v.compliance }))
+            }],
+            chart: {
+                height: 250,
+                type: 'heatmap',
+                foreColor: '#8c9cb5',
+                toolbar: { show: false }
+            },
+            plotOptions: {
+                heatmap: {
+                    shadeIntensity: 0.5,
+                    colorScale: {
+                        ranges: [{
+                            from: 0,
+                            to: 35,
+                            name: 'Low Risk',
+                            color: '#00A100'
+                        }, {
+                            from: 36,
+                            to: 69,
+                            name: 'Medium Risk',
+                            color: '#128FD9'
+                        }, {
+                            from: 70,
+                            to: 100,
+                            name: 'High Risk',
+                            color: '#FFB200'
+                        }]
+                    }
+                }
+            },
+            theme: { mode: 'dark' }
+        };
+
+        if (heatmapChart) heatmapChart.destroy();
+        heatmapChart = new ApexCharts(document.querySelector("#risk-heatmap-chart"), options);
+        heatmapChart.render();
+    }
+
+    async function loadPredictiveAnalytics() {
+        if (!token) return;
+        
+        try {
+            const response = await fetch('/api/v2/predictive/telemetry', {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            
+            // 1. Render Multi-series Forecast Line Chart
+            const options = {
+                series: [{
+                    name: "Forecasted Trust score",
+                    data: data.forecasts.trust
+                }, {
+                    name: "Forecasted Risk score",
+                    data: data.forecasts.risk
+                }, {
+                    name: "Forecasted Quality score (scaled)",
+                    data: data.forecasts.quality.map(q => q * 20.0)
+                }],
+                chart: {
+                    height: 250,
+                    type: 'line',
+                    foreColor: '#8c9cb5',
+                    toolbar: { show: false }
+                },
+                colors: ['#00e396', '#ff4560', '#00f2fe'],
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 3 },
+                xaxis: {
+                    categories: data.timeline
+                },
+                grid: {
+                    borderColor: 'rgba(255, 255, 255, 0.05)'
+                },
+                theme: { mode: 'dark' }
+            };
+
+            if (predictionChart) predictionChart.destroy();
+            predictionChart = new ApexCharts(document.querySelector("#predictive-trajectory-chart"), options);
+            predictionChart.render();
+            
+            // 2. Render Progress Gauges
+            const p = data.probabilities;
+            
+            const compEl = document.getElementById('gauge-comp-fail');
+            compEl.style.width = `${p.compliance_failure}%`;
+            compEl.innerText = `${p.compliance_failure}%`;
+            
+            const fraudEl = document.getElementById('gauge-fraud-prob');
+            fraudEl.style.width = `${p.fraud_probability}%`;
+            fraudEl.innerText = `${p.fraud_probability}%`;
+            
+            const dupEl = document.getElementById('gauge-dup-overlap');
+            dupEl.style.width = `${p.duplicate_probability}%`;
+            dupEl.innerText = `${p.duplicate_probability}%`;
+            
+            document.getElementById('pred-confidence-badge').innerText = `${p.confidence_score}%`;
+            
+            // 3. Render Expiring Docs
+            const expTbody = document.getElementById('predictive-expiries-rows');
+            expTbody.innerHTML = "";
+            const expDocs = data.expiring_documents || [];
+            if (expDocs.length === 0) {
+                expTbody.innerHTML = `<tr><td colspan="3" class="text-center text-secondary py-2">None expiring in next 90 days.</td></tr>`;
+            } else {
+                expDocs.forEach(d => {
+                    expTbody.innerHTML += `
+                        <tr>
+                            <td><strong>${d.doc_type}</strong></td>
+                            <td>Vendor ID ${data.vendor_id || 1}</td>
+                            <td class="text-warning fw-bold">${d.days_left} Days</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            // 4. Render Threat Advisories
+            const advContainer = document.getElementById('predictive-advisories');
+            advContainer.innerHTML = "";
+            const recs = data.recommendations || [];
+            recs.forEach(r => {
+                advContainer.innerHTML += `
+                    <div class="mb-3 p-2 rounded bg-dark border border-secondary border-opacity-10">
+                        <span class="text-danger fw-bold d-block">⚠️ ${r.threat}</span>
+                        <p class="text-secondary-light mb-1">${r.impact}</p>
+                        <span class="text-success small d-block">💡 recommendation: ${r.action}</span>
+                    </div>
+                `;
+            });
+            
+        } catch (err) {
+            console.error("Error loading predictive telemetry:", err);
+        }
+    }
+
+    async function loadHealthIndexTab() {
+        if (!token) return;
+        
+        try {
+            const response = await fetch('/api/v2/health/index', {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (!data.success) return;
+            
+            // Update table counters
+            const dist = data.distribution || {};
+            document.getElementById('health-count-excellent').innerText = dist.Excellent || 0;
+            document.getElementById('health-count-good').innerText = dist.Good || 0;
+            document.getElementById('health-count-average').innerText = dist.Average || 0;
+            document.getElementById('health-count-poor').innerText = dist.Poor || 0;
+            document.getElementById('health-count-critical').innerText = dist.Critical || 0;
+            
+            // Render donut chart
+            const options = {
+                series: [
+                    dist.Excellent || 0,
+                    dist.Good || 0,
+                    dist.Average || 0,
+                    dist.Poor || 0,
+                    dist.Critical || 0
+                ],
+                chart: {
+                    type: 'donut',
+                    height: 250,
+                    foreColor: '#8c9cb5'
+                },
+                labels: ['Excellent', 'Good', 'Average', 'Poor', 'Critical'],
+                colors: ['#00e396', '#00f2fe', '#f39c12', '#ff4560', '#9c27b0'],
+                legend: {
+                    position: 'bottom'
+                },
+                theme: { mode: 'dark' }
+            };
+            
+            if (healthChart) healthChart.destroy();
+            healthChart = new ApexCharts(document.querySelector("#health-distribution-chart"), options);
+            healthChart.render();
+            
+        } catch (err) {
+            console.error("Error loading health index distribution:", err);
+        }
+    }
+
+    async function loadReportCenter() {
+        if (!token) return;
+        loadReportSchedules();
+        loadReportHistory();
+    }
+
+    async function loadReportSchedules() {
+        try {
+            const response = await fetch('/api/v2/reports/schedule', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('report-schedules-rows');
+            tbody.innerHTML = "";
+            
+            if (data.success && data.schedules.length > 0) {
+                data.schedules.forEach(s => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${s.report_type}</strong></td>
+                            <td>${s.frequency}</td>
+                            <td><span class="badge bg-secondary">${s.export_format}</span></td>
+                            <td><code>${s.recipient_email}</code></td>
+                            <td><span class="badge ${s.is_active ? 'bg-success' : 'bg-danger'}">${s.is_active ? 'Active' : 'Paused'}</span></td>
+                            <td>
+                                <button class="btn btn-xs btn-outline-danger py-1 px-2" onclick="deleteReportSchedule(${s.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-3">No automated schedules configured.</td></tr>`;
+            }
+        } catch (err) {
+            console.error("Error loading report schedules:", err);
+        }
+    }
+
+    async function loadReportHistory() {
+        try {
+            const response = await fetch('/api/v2/reports/history', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('report-history-rows');
+            tbody.innerHTML = "";
+            
+            if (data.success && data.history.length > 0) {
+                data.history.forEach(h => {
+                    const dateStr = new Date(h.created_at).toLocaleString();
+                    const badgeClass = h.status === 'Completed' ? 'bg-success' : 'bg-danger';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${dateStr}</td>
+                            <td><strong>${h.report_type}</strong></td>
+                            <td><span class="badge bg-secondary">${h.export_format}</span></td>
+                            <td>${h.generated_by}</td>
+                            <td><span class="badge ${badgeClass}">${h.status}</span></td>
+                            <td><code>${h.filename}</code></td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-3">No recent reports logged.</td></tr>`;
+            }
+        } catch (err) {
+            console.error("Error loading report history:", err);
+        }
+    }
+
+    async function triggerReportGeneration() {
+        const reportType = document.getElementById('report-type-select').value;
+        const format = document.getElementById('report-format-select').value;
+        
+        try {
+            const response = await fetch('/api/v2/reports/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ report_type: reportType, export_format: format })
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Get filename from Content-Disposition header if present
+                const disp = response.headers.get('Content-Disposition');
+                let filename = `${reportType.toLowerCase().replace(/ /g, '_')}_export`;
+                if (disp && disp.includes('filename=')) {
+                    filename = disp.split('filename=')[1].replace(/"/g, '');
+                } else {
+                    filename += format === 'Excel' ? '.xlsx' : (format === 'CSV' ? '.csv' : '.html');
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                // Reload history logs
+                loadReportHistory();
+            } else {
+                const errData = await response.json();
+                alert(`Failed to generate report: ${errData.message}`);
+            }
+        } catch (err) {
+            console.error("Error generating report:", err);
+            alert("Error connecting to report generator API.");
+        }
+    }
+
+    function openScheduleReportModal() {
+        document.getElementById('schedule-report-form').reset();
+        const modal = new bootstrap.Modal(document.getElementById('scheduleReportModal'));
+        modal.show();
+    }
+
+    async function saveReportSchedule(event) {
+        event.preventDefault();
+        const reportType = document.getElementById('sched-report-type').value;
+        const frequency = document.getElementById('sched-frequency').value;
+        const format = document.getElementById('sched-format').value;
+        const email = document.getElementById('sched-email').value;
+        
+        try {
+            const response = await fetch('/api/v2/reports/schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    report_type: reportType,
+                    frequency: frequency,
+                    export_format: format,
+                    recipient_email: email
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('scheduleReportModal')).hide();
+                loadReportSchedules();
+            } else {
+                alert(`Failed to save schedule: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error saving report schedule:", err);
+        }
+    }
+
+    async function deleteReportSchedule(scheduleId) {
+        if (!confirm("Are you sure you want to delete this scheduled report profile?")) return;
+        try {
+            const response = await fetch(`/api/v2/reports/schedule/${scheduleId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadReportSchedules();
+            } else {
+                alert(`Failed to delete schedule: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error deleting report schedule:", err);
+        }
+    }
+
+    <!-- Audit Trail Detail Inspect Modal -->
+    <div class="modal fade" id="auditDetailModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(10px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card border border-secondary border-opacity-30" style="background-color: #0b0f19;">
+                <div class="modal-header border-bottom border-secondary border-opacity-10">
+                    <h5 class="modal-title text-white">🔍 Audit Log Parameters</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block">ACTION TYPE</span>
+                            <strong class="text-white" id="modal-audit-action">--</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block">MODULE</span>
+                            <strong class="text-white" id="modal-audit-module">--</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block">PERFORMED BY</span>
+                            <span class="text-info" id="modal-audit-user">--</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block">IP ADDRESS</span>
+                            <span class="text-white" id="modal-audit-ip">--</span>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-secondary d-block">REASON / DESCRIPTION</span>
+                            <p class="text-white-50" id="modal-audit-reason">--</p>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block mb-1">PREVIOUS STATE (OLD VALUE)</span>
+                            <pre class="p-2 rounded bg-dark text-warning border border-secondary border-opacity-25" id="modal-audit-old" style="max-height: 200px; overflow-y: auto; font-size: 0.75rem;">--</pre>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-secondary d-block mb-1">PROPOSED STATE (NEW VALUE)</span>
+                            <pre class="p-2 rounded bg-dark text-success border border-secondary border-opacity-25" id="modal-audit-new" style="max-height: 200px; overflow-y: auto; font-size: 0.75rem;">--</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // JS Logic for Audit logs
+    let auditLogsData = [];
+
+    async function loadAuditLogs() {
+        if (!token) return;
+        
+        try {
+            const search = document.getElementById('audit-search').value;
+            const module = document.getElementById('audit-module-filter').value;
+            const start = document.getElementById('audit-start-date').value;
+            const end = document.getElementById('audit-end-date').value;
+            
+            let url = `/api/v2/audit-logs?module=${module}&`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (start) url += `start_date=${start}&`;
+            if (end) url += `end_date=${end}&`;
+            
+            const response = await fetch(url, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            auditLogsData = data.logs || [];
+            
+            renderAuditTable(auditLogsData);
+        } catch (err) {
+            console.error("Error loading audit logs:", err);
+        }
+    }
+
+    function renderAuditTable(logs) {
+        const tbody = document.getElementById('audit-log-rows');
+        tbody.innerHTML = "";
+        
+        if (logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-3">No system audit logs match the query filters.</td></tr>`;
+            return;
+        }
+        
+        logs.forEach(log => {
+            const dt = new Date(log.created_at);
+            const timeStr = dt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const dateStr = dt.toLocaleDateString([], {month: 'short', day: 'numeric', year: 'numeric'});
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${dateStr} ${timeStr}</strong></td>
+                <td>${log.performed_by}</td>
+                <td><span class="badge bg-secondary">${log.ip_address}</span></td>
+                <td><span class="text-info">${log.action_type}</span></td>
+                <td><span class="badge bg-dark border border-secondary">${log.module_name}</span></td>
+                <td class="text-truncate text-secondary-light" style="max-width: 150px;">${log.reason || 'N/A'}</td>
+                <td>
+                    <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:0.7rem;" onclick='inspectAuditDetail(${JSON.stringify(log).replace(/'/g, "&apos;")})'>Inspect</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function inspectAuditDetail(log) {
+        document.getElementById('modal-audit-action').innerText = log.action_type;
+        document.getElementById('modal-audit-module').innerText = log.module_name;
+        document.getElementById('modal-audit-user').innerText = log.performed_by;
+        document.getElementById('modal-audit-ip').innerText = log.ip_address;
+        document.getElementById('modal-audit-reason').innerText = log.reason || 'N/A';
+        
+        document.getElementById('modal-audit-old').textContent = log.old_value ? JSON.stringify(log.old_value, null, 2) : 'No previous state.';
+        document.getElementById('modal-audit-new').textContent = log.new_value ? JSON.stringify(log.new_value, null, 2) : 'No new state.';
+        
+        const modal = new bootstrap.Modal(document.getElementById('auditDetailModal'));
+        modal.show();
+    }
+
+    function clearAuditFilters() {
+        document.getElementById('audit-search').value = "";
+        document.getElementById('audit-module-filter').value = "All";
+        document.getElementById('audit-start-date').value = "";
+        document.getElementById('audit-end-date').value = "";
+        loadAuditLogs();
+    }
+
+    function exportAuditTrail(format) {
+        if (auditLogsData.length === 0) {
+            alert("No audit logs found to export.");
+            return;
+        }
+
+        let content = "";
+        let filename = `system_audit_trail`;
+        
+        if (format === 'json') {
+            content = JSON.stringify(auditLogsData, null, 2);
+            filename += ".json";
+            downloadFile(content, 'application/json', filename);
+        } else if (format === 'csv') {
+            filename += ".csv";
+            let csv = "ID,Timestamp,Performed By,IP Address,Action Type,Module,Reason,Old Value,New Value\n";
+            auditLogsData.forEach(log => {
+                const reasonEscaped = (log.reason || '').replace(/"/g, '""');
+                const oldEscaped = JSON.stringify(log.old_value || {}).replace(/"/g, '""');
+                const newEscaped = JSON.stringify(log.new_value || {}).replace(/"/g, '""');
+                csv += `"${log.id}","${log.created_at}","${log.performed_by}","${log.ip_address}","${log.action_type}","${log.module_name}","${reasonEscaped}","${oldEscaped}","${newEscaped}"\n`;
+            });
+            downloadFile(csv, 'text/csv', filename);
+        }
+    }
+
+    // Role-based dashboard filters for Audit Trail
+    const originalSwitchRole = switchRole;
+    switchRole = async function(email, password, element) {
+        await originalSwitchRole(email, password, element);
+        
+        const auditHeader = document.getElementById('audit-tab-header');
+        if (['Admin', 'Auditor'].includes(activeRole)) {
+            auditHeader.classList.remove('d-none');
+        } else {
+            auditHeader.classList.add('d-none');
+            if (document.getElementById('audit-tab').classList.contains('active')) {
+                const overviewTab = new bootstrap.Tab(document.getElementById('overview-tab'));
+                overviewTab.show();
+            }
+        }
+    }
+
+    <!-- Create Custom Business Rule Modal -->
+    <div class="modal fade" id="createRuleModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(10px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card border border-secondary border-opacity-30" style="background-color: #0b0f19;">
+                <div class="modal-header border-bottom border-secondary border-opacity-10">
+                    <h5 class="modal-title text-white">⚙️ Configure Custom Business Rule</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-rule-form" onsubmit="submitCreateRule(event)">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-secondary small d-block mb-1">RULE NAME</label>
+                                <input type="text" id="rule-name" class="form-control bg-dark text-white border-secondary" required placeholder="e.g. Auto-Suspend Low Trust">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-secondary small d-block mb-1">RULE GROUP</label>
+                                <select id="rule-group" class="form-select bg-dark text-white border-secondary" required>
+                                    <option value="Compliance">Compliance</option>
+                                    <option value="Fraud">Fraud</option>
+                                    <option value="Trust">Trust</option>
+                                    <option value="Quality">Quality</option>
+                                    <option value="Risk">Risk</option>
+                                </select>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="text-secondary small d-block mb-1">DESCRIPTION</label>
+                                <input type="text" id="rule-desc" class="form-control bg-dark text-white border-secondary" placeholder="Brief rationale for this rule...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="text-secondary small d-block mb-1">PRIORITY</label>
+                                <input type="number" id="rule-priority" class="form-control bg-dark text-white border-secondary" value="1" min="1" required>
+                            </div>
+                            
+                            <!-- Logic builder leaf condition -->
+                            <div class="col-12 border-top border-secondary border-opacity-10 pt-3">
+                                <span class="text-white fw-bold d-block mb-2">Rule Evaluation (IF Condition)</span>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-4">
+                                        <label class="text-secondary small d-block mb-1">Fact Parameter</label>
+                                        <select id="cond-fact" class="form-select bg-dark text-white border-secondary">
+                                            <option value="gst_missing">GST Missing (true/false)</option>
+                                            <option value="pan_missing">PAN Missing (true/false)</option>
+                                            <option value="trust_score">Trust Score (0-100)</option>
+                                            <option value="compliance_score">Compliance Score (0-100)</option>
+                                            <option value="fraud_score">Fraud Score (0-100)</option>
+                                            <option value="has_fraud_alert">Has Fraud Alert (true/false)</option>
+                                            <option value="days_until_expiry">Days Until Expiry (count)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-secondary small d-block mb-1">Comparator</label>
+                                        <select id="cond-comp" class="form-select bg-dark text-white border-secondary">
+                                            <option value="eq">Equals (==)</option>
+                                            <option value="neq">Not Equals (!=)</option>
+                                            <option value="gt">Greater Than (&gt;)</option>
+                                            <option value="lt">Less Than (&lt;)</option>
+                                            <option value="gte">Greater Than or Equal (&gt;=)</option>
+                                            <option value="lte">Less Than or Equal (&lt;=)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-secondary small d-block mb-1">Target Value</label>
+                                        <input type="text" id="cond-val" class="form-control bg-dark text-white border-secondary" required placeholder="e.g. true or 45">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions builder -->
+                            <div class="col-12 border-top border-secondary border-opacity-10 pt-3">
+                                <span class="text-white fw-bold d-block mb-2">Rule Execution (THEN Action)</span>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-6">
+                                        <label class="text-secondary small d-block mb-1">Trigger Action</label>
+                                        <select id="action-type" class="form-select bg-dark text-white border-secondary">
+                                            <option value="reject_vendor">Reject Vendor</option>
+                                            <option value="suspend_vendor">Suspend Vendor</option>
+                                            <option value="adjust_trust_score">Adjust Trust Score</option>
+                                            <option value="adjust_compliance_score">Adjust Compliance Score</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="text-secondary small d-block mb-1">Action parameters / reason</label>
+                                        <input type="text" id="action-param" class="form-control bg-dark text-white border-secondary" required placeholder="e.g. -15 Pts or Suspend Code">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-custom-cyan">Register Rule</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Simulation Modal -->
+    <div class="modal fade" id="simulateRuleModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(10px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border border-secondary border-opacity-30" style="background-color: #0b0f19;">
+                <div class="modal-header border-bottom border-secondary border-opacity-10">
+                    <h5 class="modal-title text-white">🧪 Rules Simulator</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="text-secondary small d-block mb-1">SELECT VENDOR FROM REGISTRY</label>
+                        <select id="simulate-vendor-select" class="form-select bg-dark text-white border-secondary">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <input type="hidden" id="simulate-rule-id">
+                    
+                    <button class="btn btn-custom-cyan w-100 mb-4" onclick="runSimulation()">Run Mock Evaluation</button>
+                    
+                    <div class="p-3 rounded bg-dark border border-secondary border-opacity-20 d-none" id="simulation-output-panel">
+                        <h6 class="text-white mb-2">Simulation Outputs:</h6>
+                        <div class="mb-2">
+                            <span class="text-secondary small">Condition Matched:</span>
+                            <span id="sim-match-badge" class="badge">--</span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-secondary small">Resolved facts:</span>
+                            <pre id="sim-facts" class="small text-info-light mb-0" style="font-size:0.75rem;"></pre>
+                        </div>
+                        <div>
+                            <span class="text-secondary small">Resulting Actions:</span>
+                            <pre id="sim-actions" class="small text-success-light mb-0" style="font-size:0.75rem;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Report Modal -->
+    <div class="modal fade" id="scheduleReportModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(10px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border border-secondary border-opacity-30" style="background-color: #0b0f19;">
+                <div class="modal-header border-bottom border-secondary border-opacity-10">
+                    <h5 class="modal-title text-white">📅 Configure Report Schedule</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="schedule-report-form" onsubmit="saveReportSchedule(event)">
+                        <div class="mb-3">
+                            <label class="text-secondary small d-block mb-1">Select Report Scope</label>
+                            <select id="sched-report-type" class="form-select bg-dark text-white border-secondary" required>
+                                <option value="Vendor Summary">Vendor Summary</option>
+                                <option value="Vendor Quality Report">Vendor Quality Report</option>
+                                <option value="Trust Report">Trust Report</option>
+                                <option value="Risk Report">Risk Report</option>
+                                <option value="Compliance Report">Compliance Report</option>
+                                <option value="Fraud Report">Fraud Report</option>
+                                <option value="Executive Dashboard Report">Executive Dashboard Report</option>
+                                <option value="Monthly Report">Monthly Report</option>
+                                <option value="Yearly Report">Yearly Report</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-secondary small d-block mb-1">Frequency</label>
+                            <select id="sched-frequency" class="form-select bg-dark text-white border-secondary" required>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-secondary small d-block mb-1">Export Format</label>
+                            <select id="sched-format" class="form-select bg-dark text-white border-secondary" required>
+                                <option value="PDF">PDF</option>
+                                <option value="Excel">Excel</option>
+                                <option value="CSV">CSV</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-secondary small d-block mb-1">Recipient Email</label>
+                            <input type="email" id="sched-email" class="form-control bg-dark text-white border-secondary" placeholder="admin@company.com" required>
+                        </div>
+                        <button type="submit" class="btn btn-custom-cyan w-100 mt-2">💾 Save Schedule Configuration</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let rulesData = [];
+
+    async function loadBusinessRules() {
+        if (!token) return;
+        try {
+            const response = await fetch('/api/v2/rules', {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            rulesData = data.rules || [];
+            
+            renderRulesTable(rulesData);
+        } catch (err) {
+            console.error("Error loading rules:", err);
+        }
+    }
+
+    function renderRulesTable(rules) {
+        const tbody = document.getElementById('business-rules-rows');
+        tbody.innerHTML = "";
+        
+        if (rules.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-3">No dynamic business rules configured.</td></tr>`;
+            return;
+        }
+        
+        rules.forEach(rule => {
+            const checked = rule.is_enabled ? 'checked' : '';
+            
+            // Format condition logic preview
+            let condPreview = "";
+            const cond = rule.conditions_json;
+            if (cond.operator) {
+                const subRules = cond.rules || [];
+                condPreview = `${cond.operator} (${subRules.map(r => `${r.fact} ${r.comparator} ${r.value}`).join(', ')})`;
+            } else {
+                condPreview = `${cond.fact} ${cond.comparator} ${cond.value}`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>#${rule.priority}</strong></td>
+                <td>
+                    <span class="text-white fw-bold d-block">${rule.name}</span>
+                    <span class="text-secondary small" style="font-size:0.7rem;">${rule.description || ''}</span>
+                </td>
+                <td><span class="badge bg-dark border border-secondary">${rule.rule_group}</span></td>
+                <td class="text-warning-light" style="font-family:monospace; max-width:200px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${condPreview}</td>
+                <td class="text-success-light" style="font-family:monospace;">${JSON.stringify(rule.actions_json)}</td>
+                <td>
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input" type="checkbox" ${checked} onchange="toggleRuleEnable(${rule.id})">
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:0.7rem;" onclick="openSimulateModal(${rule.id})">Simulate</button>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size:0.7rem;" onclick="deleteRule(${rule.id})">Delete</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openCreateRuleModal() {
+        const modal = new bootstrap.Modal(document.getElementById('createRuleModal'));
+        modal.show();
+    }
+
+    async function submitCreateRule(event) {
+        event.preventDefault();
+        if (!token) return;
+        
+        const name = document.getElementById('rule-name').value;
+        const group = document.getElementById('rule-group').value;
+        const desc = document.getElementById('rule-desc').value;
+        const priority = document.getElementById('rule-priority').value;
+        
+        // Leaf condition params
+        const fact = document.getElementById('cond-fact').value;
+        const comp = document.getElementById('cond-comp').value;
+        const valStr = document.getElementById('cond-val').value.trim();
+        
+        // Parse value types
+        let val = valStr;
+        if (valStr.toLowerCase() === 'true') val = true;
+        else if (valStr.toLowerCase() === 'false') val = false;
+        else if (!isNaN(valStr)) val = Number(valStr);
+        
+        const conditions_json = {
+            "fact": fact,
+            "comparator": comp,
+            "value": val
+        };
+        
+        // Action details
+        const actionType = document.getElementById('action-type').value;
+        const actionParam = document.getElementById('action-param').value;
+        
+        const actions_json = {
+            "action": actionType,
+            "param": actionParam
+        };
+        
+        try {
+            const response = await fetch('/api/v2/rules', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: desc,
+                    rule_group: group,
+                    priority: parseInt(priority),
+                    conditions_json: conditions_json,
+                    actions_json: actions_json
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                // Hide modal and refresh
+                bootstrap.Modal.getInstance(document.getElementById('createRuleModal')).hide();
+                document.getElementById('create-rule-form').reset();
+                loadBusinessRules();
+            } else {
+                alert("Failed to create rule: " + data.message);
+            }
+        } catch (err) {
+            console.error("Error creating business rule:", err);
+        }
+    }
+
+    async function toggleRuleEnable(ruleId) {
+        if (!token) return;
+        try {
+            const response = await fetch(`/api/v2/rules/${ruleId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadBusinessRules();
+            }
+        } catch (err) {
+            console.error("Error toggling rule status:", err);
+        }
+    }
+
+    async function deleteRule(ruleId) {
+        if (!confirm("Are you sure you want to delete this custom business rule?")) return;
+        if (!token) return;
+        
+        try {
+            const response = await fetch(`/api/v2/rules/${ruleId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadBusinessRules();
+            }
+        } catch (err) {
+            console.error("Error deleting rule:", err);
+        }
+    }
+
+    function openSimulateModal(ruleId) {
+        document.getElementById('simulate-rule-id').value = ruleId;
+        
+        // Populate vendor select dropdown
+        const select = document.getElementById('simulate-vendor-select');
+        select.innerHTML = "";
+        
+        registryData.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.innerText = `${v.name} (ID: ${v.id})`;
+            select.appendChild(opt);
+        });
+        
+        document.getElementById('simulation-output-panel').classList.add('d-none');
+        
+        const modal = new bootstrap.Modal(document.getElementById('simulateRuleModal'));
+        modal.show();
+    }
+
+    async function runSimulation() {
+        if (!token) return;
+        
+        const vendorId = document.getElementById('simulate-vendor-select').value;
+        const ruleId = document.getElementById('simulate-rule-id').value;
+        
+        try {
+            const response = await fetch('/api/v2/rules/simulate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-Role': activeRole
+                },
+                body: JSON.stringify({
+                    vendor_id: parseInt(vendorId),
+                    rule_id: parseInt(ruleId)
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const panel = document.getElementById('simulation-output-panel');
+                panel.classList.remove('d-none');
+                
+                const matchBadge = document.getElementById('sim-match-badge');
+                if (data.is_match) {
+                    matchBadge.className = 'badge bg-success';
+                    matchBadge.innerText = 'MATCHED';
+                } else {
+                    matchBadge.className = 'badge bg-danger';
+                    matchBadge.innerText = 'NOT MATCHED';
+                }
+                
+                document.getElementById('sim-facts').textContent = JSON.stringify(data.resolved_facts, null, 2);
+                document.getElementById('sim-actions').textContent = data.actions ? JSON.stringify(data.actions, null, 2) : 'No actions applied.';
+            }
+        } catch (err) {
+            console.error("Simulation run failure:", err);
+        }
+    }
+
+    // Role-based visibility guards updated
+    const originalSwitchRole = switchRole;
+    switchRole = async function(email, password, element) {
+        await originalSwitchRole(email, password, element);
+        
+        const rulesHeader = document.getElementById('rules-tab-header');
+        if (activeRole === 'Admin') {
+            rulesHeader.classList.remove('d-none');
+        } else {
+            rulesHeader.classList.add('d-none');
+            if (document.getElementById('rules-tab').classList.contains('active')) {
+                const overviewTab = new bootstrap.Tab(document.getElementById('overview-tab'));
+                overviewTab.show();
+            }
+        }
+    }
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+        switchRole('admin@system.local', 'admin123', document.querySelector('.role-pill'));
+    });
 </script>
 
+    <!-- AI Copilot Floating Drawer -->
+    <style>
+        .copilot-bubble {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8e2de2 0%, #4facfe 100%);
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse-glow 2s infinite;
+        }
+        .copilot-bubble:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 242, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+        }
+        .copilot-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 520px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(11, 15, 25, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 9999;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .copilot-panel.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .copilot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .copilot-msg {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .copilot-msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #0b0f19;
+            border-bottom-right-radius: 2px;
+        }
+        .copilot-msg.copilot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f3f6fa;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-bottom-left-radius: 2px;
+        }
+        .copilot-msg pre {
+            background: rgba(0,0,0,0.2) !important;
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            margin-top: 5px;
+            margin-bottom: 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .copilot-msg table {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .copilot-msg table th, .copilot-msg table td {
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 4px;
+        }
+        .copilot-quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0,0,0,0.2);
+        }
+        .copilot-chip {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #8c9cb5;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copilot-chip:hover {
+            background: rgba(0, 242, 254, 0.1);
+            color: #00f2fe;
+            border-color: #00f2fe;
+        }
+        .copilot-input-area {
+            display: flex;
+            padding: 10px 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 10px;
+        }
+    </style>
+
+    <div class="copilot-bubble" id="copilotBtn" onclick="toggleCopilotPanel()">🤖</div>
+    
+    <div class="copilot-panel" id="copilotPanel">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-10" style="background: rgba(0,0,0,0.2);">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 1.2rem;">🤖</span>
+                <div>
+                    <strong class="text-white d-block" style="font-size: 0.9rem; line-height:1.2;">Enterprise AI Copilot</strong>
+                    <span class="text-success" style="font-size: 0.7rem;">● Online | Context Aware</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" style="font-size:0.8rem;" onclick="toggleCopilotPanel()"></button>
+        </div>
+        
+        <div class="copilot-messages" id="copilotMessages">
+            <div class="copilot-msg copilot">
+                Hello! I am your Enterprise AI Copilot. Ask me questions about vendor trust, risk metrics, duplicate warnings, or compliance checklists.
+            </div>
+        </div>
+        
+        <div class="copilot-quick-chips">
+            <span class="copilot-chip" onclick="askCopilotQuick('Generate executive summary')">📊 Exec Summary</span>
+            <span class="copilot-chip" onclick="askCopilotQuick('Show duplicate vendors')">⚠️ Show Duplicates</span>
+            <span class="copilot-chip" onclick="askCopilotQuick('Which vendors are high risk?')">🚨 List High Risk</span>
+            <span class="copilot-chip" id="copilot-chip-context" onclick="askCopilotContextual()">🔍 Analyze Profile</span>
+        </div>
+        
+        <div class="copilot-input-area">
+            <input type="text" id="copilotInput" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ask copilot..." onkeydown="onCopilotKeydown(event)">
+            <button class="btn btn-sm btn-custom-cyan px-3" onclick="sendCopilotMessage()">Send</button>
+        </div>
+    </div>
+
+<script>
+    let copilotSessionId = localStorage.getItem('copilot_session_id') || "";
+    
+    if (!copilotSessionId) {
+        copilotSessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('copilot_session_id', copilotSessionId);
+    }
+
+    function toggleCopilotPanel() {
+        const panel = document.getElementById('copilotPanel');
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) {
+            loadCopilotHistory();
+        }
+    }
+
+    async function loadCopilotHistory() {
+        const tok = localStorage.getItem('dashboard_token') || localStorage.getItem('token');
+        if (!tok) return;
+        
+        try {
+            const response = await fetch(`/api/v2/copilot/history?session_id=${copilotSessionId}`, {
+                headers: { 'Authorization': `Bearer ${tok}` }
+            });
+            const data = await response.json();
+            if (data.success && data.history.length > 0) {
+                const container = document.getElementById('copilotMessages');
+                container.innerHTML = "";
+                data.history.forEach(m => {
+                    appendCopilotMsg(m.sender, m.message);
+                });
+                scrollCopilotToBottom();
+            }
+        } catch (err) {
+            console.error("Error loading copilot history:", err);
+        }
+    }
+
+    async function sendCopilotMessage() {
+        const input = document.getElementById('copilotInput');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        input.value = "";
+        appendCopilotMsg('user', text);
+        scrollCopilotToBottom();
+        
+        // Add loading spinner
+        const container = document.getElementById('copilotMessages');
+        const loader = document.createElement('div');
+        loader.id = 'copilot-loader';
+        loader.className = "copilot-msg copilot text-secondary";
+        loader.innerHTML = "Thinking...";
+        container.appendChild(loader);
+        scrollCopilotToBottom();
+
+        const tok = localStorage.getItem('dashboard_token') || localStorage.getItem('token');
+        if (!tok) {
+            loader.innerHTML = "⚠️ Please authenticate first.";
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v2/copilot/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tok}`
+                },
+                body: JSON.stringify({ message: text, session_id: copilotSessionId })
+            });
+            const data = await response.json();
+            
+            // Remove loader
+            loader.remove();
+            
+            if (data.success) {
+                appendCopilotMsg('copilot', data.response);
+                scrollCopilotToBottom();
+            } else {
+                appendCopilotMsg('copilot', "⚠️ Failed to resolve response: " + data.message);
+                scrollCopilotToBottom();
+            }
+        } catch (err) {
+            loader.remove();
+            appendCopilotMsg('copilot', "⚠️ Connection error to copilot backend API.");
+            scrollCopilotToBottom();
+        }
+    }
+
+    function appendCopilotMsg(sender, text) {
+        const container = document.getElementById('copilotMessages');
+        const div = document.createElement('div');
+        div.className = `copilot-msg ${sender}`;
+        
+        // Convert basic tables and lists
+        let html = text;
+        
+        // Markdown Tables parsing
+        if (html.includes('|')) {
+            const lines = html.split('<br/>').length > 1 ? html.split('<br/>') : html.split('\n');
+            let inTable = false;
+            let tableHtml = "<table>";
+            let parsedHtml = "";
+            
+            lines.forEach(line => {
+                if (line.trim().startsWith('|')) {
+                    if (!inTable) {
+                        inTable = true;
+                        tableHtml = "<table>";
+                    }
+                    const cols = line.split('|').map(c => c.trim()).filter((c, i, a) => i > 0 && i < a.length - 1);
+                    if (line.includes('---')) {
+                        // Separator, skip
+                        return;
+                    }
+                    tableHtml += "<tr>" + cols.map(c => `<td>${c}</td>`).join('') + "</tr>";
+                } else {
+                    if (inTable) {
+                        inTable = false;
+                        tableHtml += "</table>";
+                        parsedHtml += tableHtml;
+                    }
+                    parsedHtml += line + "<br/>";
+                }
+            });
+            if (inTable) {
+                tableHtml += "</table>";
+                parsedHtml += tableHtml;
+            }
+            html = parsedHtml;
+        } else {
+            html = html.replace(/\n/g, '<br/>');
+        }
+        
+        // Code pre blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+        // Bold tags
+        html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
+        // Bullets
+        html = html.replace(/\*\s+/g, '• ');
+        
+        div.innerHTML = html;
+        container.appendChild(div);
+    }
+
+    function scrollCopilotToBottom() {
+        const container = document.getElementById('copilotMessages');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function onCopilotKeydown(event) {
+        if (event.key === 'Enter') {
+            sendCopilotMessage();
+        }
+    }
+
+    function askCopilotQuick(text) {
+        document.getElementById('copilotInput').value = text;
+        sendCopilotMessage();
+    }
+
+    function askCopilotContextual() {
+        const path = window.location.pathname;
+        if (path.includes('/result/')) {
+            const parts = path.split('/');
+            const id = parts[parts.length - 1];
+            askCopilotQuick(`Why is trust score low for vendor ID ${id}`);
+        } else {
+            askCopilotQuick(`Suggest improvements for vendor ID 1`);
+        }
+    }
+
+    // Adapt quick chip text based on contextual page
+    document.addEventListener("DOMContentLoaded", () => {
+        const chip = document.getElementById('copilot-chip-context');
+        if (window.location.pathname.includes('/result/')) {
+            chip.innerText = "🔍 Explain Score";
+        } else {
+            chip.innerText = "⚡ Suggest Fixes";
+        }
+    });
+    // Setup Real-Time WebSocket Event Listener
+    function connectEventSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = `${wsProtocol}//${window.location.hostname}:5001`;
+        const socket = new WebSocket(socketUrl);
+
+        socket.onopen = () => {
+            console.log("WebSocket connected to real-time events server gateway.");
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                showLiveToast(data.event_type, data.payload);
+                
+                // Trigger dynamic UI refreshes
+                if (typeof loadDashboardData === 'function') {
+                    loadDashboardData(); // Refresh main dashboard tables/KPIs
+                }
+            } catch (err) {
+                console.error("Error parsing WebSocket event:", err);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
+            setTimeout(connectEventSocket, 5000);
+        };
+    }
+
+    function showLiveToast(type, payload) {
+        const container = document.getElementById('live-toast-container');
+        if (!container) return;
+
+        // Determine icon and color based on event type
+        let icon = 'bi-info-circle';
+        let color = 'text-info';
+        let border = 'rgba(0, 184, 255, 0.4)';
+        let title = type;
+        let body = '';
+
+        if (type === 'Document Upload') {
+            icon = 'bi-file-earmark-arrow-up';
+            color = 'text-info';
+            border = 'rgba(0, 184, 255, 0.4)';
+            body = `New document <strong>${payload.document_name}</strong> (${payload.document_type}) uploaded for Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Fraud Alert') {
+            icon = 'bi-shield-exclamation';
+            color = 'text-danger';
+            border = 'rgba(255, 69, 96, 0.4)';
+            body = `<strong>Fraud Warning Flagged:</strong> ${payload.root_cause} (Risk level: ${payload.risk_level}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Risk Alert') {
+            icon = 'bi-exclamation-triangle';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>Critical Risk Alert:</strong> Trust score has fallen on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Trust Score Change') {
+            icon = 'bi-graph-up';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Trust score recalculated to <strong>${payload.trust_score}</strong>.`;
+        } else if (type === 'Quality Score Change') {
+            icon = 'bi-award';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Quality score recalculated to <strong>${payload.quality_rating}</strong>.`;
+        } else if (type === 'Compliance Change') {
+            icon = 'bi-card-checklist';
+            color = 'text-cyan';
+            border = 'rgba(0, 242, 254, 0.4)';
+            body = `Compliance score updated to <strong>${payload.compliance_score}%</strong> (Status: ${payload.approval_status}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Vendor Update') {
+            icon = 'bi-person-gear';
+            color = 'text-white';
+            border = 'rgba(255, 255, 255, 0.2)';
+            body = `Vendor profile <strong>${payload.name}</strong> status updated to <strong>${payload.status}</strong>.`;
+        } else if (type === 'Live Notification') {
+            icon = 'bi-bell-fill';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>${payload.title}</strong>: ${payload.message}`;
+        }
+
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const toastHtml = `
+            <div id="${toastId}" class="toast show glass-card border mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="background: rgba(22, 33, 54, 0.85); border-color: ${border}; min-width: 320px;">
+                <div class="toast-header border-bottom border-secondary border-opacity-10 text-white" style="background: transparent;">
+                    <i class="bi ${icon} ${color} me-2" style="font-size: 1.1rem;"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-secondary">Just now</small>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close" onclick="document.getElementById('${toastId}').remove()"></button>
+                </div>
+                <div class="toast-body text-white" style="font-size: 0.85rem;">
+                    ${body}
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Auto remove toast after 6 seconds
+        setTimeout(() => {
+            const toastEl = document.getElementById(toastId);
+            if (toastEl) {
+                toastEl.classList.remove('show');
+                setTimeout(() => toastEl.remove(), 300);
+            }
+        }, 6000);
+    }
+
+    // Initialize socket connection
+    window.addEventListener('DOMContentLoaded', connectEventSocket);
+</script>
+
+<div id="live-toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

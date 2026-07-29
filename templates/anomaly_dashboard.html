@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anomaly Investigation Workspace</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.12) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .anomaly-item {
+            padding: 16px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .anomaly-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateX(4px);
+        }
+        .anomaly-item.active {
+            background: rgba(255, 69, 96, 0.08);
+            border-left-color: var(--danger-glow);
+        }
+
+        .severity-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .severity-badge.critical { background: var(--danger-glow); color: white; }
+        .severity-badge.high { background: #ffb01a; color: black; }
+        .severity-badge.medium { background: var(--info-glow); color: white; }
+        .severity-badge.low { background: var(--success-glow); color: white; }
+
+        .type-badge {
+            font-size: 0.72rem;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.06);
+            color: var(--text-secondary);
+            border: 1px solid var(--card-border);
+        }
+
+        .fact-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .score-radial {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 69, 96, 0.15);
+            border-top-color: var(--danger-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🔍 ANOMALY DETECTION ENGINE</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-success fw-bold" href="/reputation-console"><i class="bi bi-shield-shaded"></i> 🛡️ Reputation</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Registry Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column mb-4">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Anomaly Investigation Workspace</h1>
+                <p class="text-secondary mb-0">Explainable multi-dimensional outliers, peer deviations, and rule exceptions.</p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button class="btn btn-danger btn-sm fw-bold" onclick="triggerAnomalyScan()"><i class="bi bi-cpu"></i> Trigger New Engine Scan</button>
+            </div>
+        </div>
+
+        <div class="row g-4 flex-grow-1">
+            
+            <!-- Left Column: Detected Anomalies list -->
+            <div class="col-lg-4 col-12 d-flex flex-column">
+                <div class="glass-card p-4 flex-grow-1">
+                    <h5 class="text-white mb-3"><i class="bi bi-shield-exclamation"></i> Flagged Anomaly Alerts</h5>
+                    
+                    <div id="anomalies-list-container" class="overflow-y-auto" style="max-height: 600px;">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Explainability & Remediation Panel -->
+            <div class="col-lg-8 col-12 d-flex flex-column">
+                <div class="glass-card p-4 flex-grow-1" id="explainability-workspace">
+                    <!-- Default selection message -->
+                    <p class="text-secondary text-center py-5">Select a flagged anomaly from the left panel to open the explainability logs workspace.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripting Workspace Anomaly logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            // Decode role claims
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {}
+        }
+
+        let detectedAnomalies = [];
+        let selectedAnomalyIndex = 0;
+
+        async function triggerAnomalyScan() {
+            try {
+                const scanBtn = document.querySelector('button[onclick="triggerAnomalyScan()"]');
+                scanBtn.disabled = true;
+                scanBtn.innerText = "Scanning cohort...";
+                
+                const response = await fetch('/api/v2/anomalies/scan', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Engine scan complete! Found ${data.anomalies_found} active anomalies.`);
+                    loadAnomaliesList();
+                } else {
+                    alert("Scan failed: " + data.message);
+                }
+                scanBtn.disabled = false;
+                scanBtn.innerText = "Trigger New Engine Scan";
+            } catch (err) {
+                console.error("Error triggering scan:", err);
+            }
+        }
+
+        async function loadAnomaliesList() {
+            try {
+                const response = await fetch('/api/v2/anomalies?status=Active', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    detectedAnomalies = data.anomalies;
+                    renderAnomaliesList();
+                    if (detectedAnomalies.length > 0) {
+                        selectAnomaly(0);
+                    } else {
+                        document.getElementById('explainability-workspace').innerHTML = `
+                            <div class="text-center py-5">
+                                <i class="bi bi-shield-check text-success fs-1"></i>
+                                <h5 class="text-white mt-3">All Clear</h5>
+                                <p class="text-secondary small">No active vendor anomalies detected in the database.</p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching anomalies list:", err);
+            }
+        }
+
+        function renderAnomaliesList() {
+            const container = document.getElementById('anomalies-list-container');
+            container.innerHTML = "";
+
+            if (detectedAnomalies.length === 0) {
+                container.innerHTML = `<div class="text-success text-center py-4 small">No active anomalies flagged.</div>`;
+                return;
+            }
+
+            detectedAnomalies.forEach((a, idx) => {
+                const activeCls = idx === selectedAnomalyIndex ? 'active' : '';
+                const sevCls = a.severity.toLowerCase();
+                
+                container.innerHTML += `
+                    <div class="glass-card anomaly-item ${activeCls}" onclick="selectAnomaly(${idx})">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-white small">${a.vendor_name}</strong>
+                            <span class="severity-badge ${sevCls}">${a.severity}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="type-badge">${a.pattern}</span>
+                            <span class="text-danger small fw-bold">${a.anomaly_score.toFixed(0)} Score</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectAnomaly(idx) {
+            selectedAnomalyIndex = idx;
+            renderAnomaliesList();
+            renderExplainabilityWorkspace();
+        }
+
+        function renderExplainabilityWorkspace() {
+            const a = detectedAnomalies[selectedAnomalyIndex];
+            const container = document.getElementById('explainability-workspace');
+            if (!a) return;
+
+            const sevCls = a.severity.toLowerCase();
+
+            // Observed facts
+            let factsHtml = "";
+            Object.entries(a.observed_facts).forEach(([k, v]) => {
+                factsHtml += `
+                    <div class="col-md-4 col-6 mb-2">
+                        <div class="fact-box">
+                            <span class="text-secondary small d-block">${k}</span>
+                            <strong class="text-white">${v}</strong>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Rules triggered
+            let rulesHtml = "";
+            if (a.rule_findings.length > 0) {
+                a.rule_findings.forEach(r => {
+                    rulesHtml += `<li class="text-white py-1"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>${r}</li>`;
+                });
+            } else {
+                rulesHtml = `<li class="text-secondary py-1">No static rule violations triggered.</li>`;
+            }
+
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+                    <div>
+                        <h3 class="text-white fw-bold mb-1">${a.vendor_name}</h3>
+                        <p class="text-secondary small mb-0"><i class="bi bi-tag"></i> Anomaly Pattern: <strong class="text-white">${a.pattern}</strong></p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="score-radial">
+                            ${a.anomaly_score.toFixed(0)}
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.08)" class="my-3">
+
+                <!-- 1. Observed Facts -->
+                <div class="mb-4">
+                    <h6 class="text-secondary uppercase fw-bold mb-3"><i class="bi bi-info-circle"></i> Observed Facts (Telemetry Registry)</h6>
+                    <div class="row">
+                        ${factsHtml}
+                    </div>
+                </div>
+
+                <!-- 2. Rule-Based Findings -->
+                <div class="mb-4">
+                    <h6 class="text-secondary uppercase fw-bold mb-2"><i class="bi bi-sliders"></i> Rule-Based Exception Findings</h6>
+                    <ul class="list-unstyled mb-0">
+                        ${rulesHtml}
+                    </ul>
+                </div>
+
+                <!-- 3. ML Model Predictions -->
+                <div class="mb-4">
+                    <h6 class="text-secondary uppercase fw-bold mb-3"><i class="bi bi-cpu"></i> ML Predictions (Isolation Forest & Statistical Outliers)</h6>
+                    <div class="fact-box" style="background: rgba(142,45,226,0.05)">
+                        <div class="row">
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-secondary small d-block">Isolation Forest Outlier Prediction:</span>
+                                <strong class="text-white">${a.ml_predictions.Multi_dimensional_Anomaly_Predicted ? 'Anomalous Profile' : 'Normal Profile'}</strong>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-secondary small d-block">Trust Score MAD Z-score:</span>
+                                <strong class="text-danger">${a.ml_predictions['Modified Z-scores']['Trust Score Z'].toFixed(2)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Explanation -->
+                <div class="mb-4">
+                    <h6 class="text-secondary uppercase fw-bold mb-2"><i class="bi bi-journal-text"></i> Possible Explanation</h6>
+                    <p class="text-secondary small">${a.explanation}</p>
+                </div>
+
+                <!-- 5. Recommended action -->
+                <div class="fact-box border-danger border-opacity-30 mb-4" style="background: rgba(255,69,96,0.04)">
+                    <span class="text-danger small fw-bold d-block mb-1"><i class="bi bi-shield-alert"></i> RECOMMENDED RESOLUTION</span>
+                    <p class="mb-0 text-white small">${a.recommended_action}</p>
+                </div>
+
+                <!-- Action workflows -->
+                <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-info" onclick="resolveAnomaly(${a.id}, 'Investigating')">Set Investigating</button>
+                    <button class="btn btn-sm btn-outline-success" onclick="resolveAnomaly(${a.id}, 'Resolved')">Resolve Alert</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="resolveAnomaly(${a.id}, 'False Positive')">Dismiss as False Positive</button>
+                </div>
+            `;
+        }
+
+        async function resolveAnomaly(aid, status) {
+            try {
+                const response = await fetch(`/api/v2/anomalies/${aid}/resolve`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: status })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Alert state updated to: ${status}`);
+                    loadAnomaliesList();
+                } else {
+                    alert("Failed to update: " + data.message);
+                }
+            } catch (err) {
+                console.error("Error updating anomaly state:", err);
+            }
+        }
+
+        // Initialize loading
+        window.addEventListener('DOMContentLoaded', loadAnomaliesList);
+    </script>
+</body>
+</html>

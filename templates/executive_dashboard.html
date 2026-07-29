@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive KPI Dashboard | Vendor Data Quality & Trust</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css'">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- ApexCharts for rich interactive graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(22, 33, 54, 0.65);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --text-main: #f3f6fa;
+            --text-secondary: #8c9cb5;
+            --cyan-glow: #00f2fe;
+            --purple-glow: #8e2de2;
+            --success-glow: #00e396;
+            --danger-glow: #ff4560;
+            --info-glow: #00b8ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(142, 45, 226, 0.15) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(0, 242, 254, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 242, 254, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .accent-text-glow {
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+        }
+
+        .kpi-card {
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--cyan-glow);
+            opacity: 0.8;
+        }
+
+        .kpi-card.healthy::before { background: var(--success-glow); }
+        .kpi-card.critical::before { background: var(--danger-glow); }
+        .kpi-card.risk::before { background: var(--purple-glow); }
+        .kpi-card.info::before { background: var(--info-glow); }
+
+        .kpi-value {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin-top: 8px;
+            line-height: 1;
+        }
+
+        .kpi-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+            color: var(--text-secondary);
+        }
+
+        .healthy .kpi-icon { color: var(--success-glow); }
+        .critical .kpi-icon { color: var(--danger-glow); }
+        .risk .kpi-icon { color: var(--purple-glow); }
+        .info .kpi-icon { color: var(--info-glow); }
+
+        .table-custom {
+            color: var(--text-main);
+            border-color: rgba(255,255,255,0.05);
+            font-size: 0.85rem;
+        }
+
+        .table-custom th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom-width: 2px;
+            text-transform: uppercase;
+        }
+
+        .table-custom tr {
+            transition: background 0.2s;
+        }
+
+        .table-custom tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Micro-animations */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        .pulse-light {
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        .trend-up { color: var(--success-glow); }
+        .trend-down { color: var(--danger-glow); }
+    </style>
+</head>
+<body>
+
+    <!-- Executive Navigation Bar -->
+    <nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-10 mb-4 px-4 py-3 glass-card" style="border-radius: 0 0 16px 16px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+                <span class="fs-4 fw-bold accent-text-glow">🛡️ VENDOR TRUST COMMAND</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark text-cyan border border-info border-opacity-30 px-3 py-2" id="user-role-badge">Executive View</span>
+                <a class="btn btn-sm btn-danger fw-bold" href="/investigator-workspace"><i class="bi bi-person-bounding-box"></i> 💼 Investigator</a>
+                <a class="btn btn-sm btn-info fw-bold" href="/digital-twin"><i class="bi bi-person-workspace"></i> ♊ Twin</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/what-if-simulator"><i class="bi bi-sliders"></i> 🛠️ Simulator</a>
+                <a class="btn btn-sm btn-success fw-bold" href="/reputation-console"><i class="bi bi-shield-shaded"></i> 🛡️ Reputation</a>
+                <a class="btn btn-sm btn-danger fw-bold" href="/anomaly-investigator"><i class="bi bi-shield-exclamation"></i> ⚠️ Anomalies</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/data-lineage"><i class="bi bi-diagram-2"></i> 🧬 Lineage</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/fraud-investigator"><i class="bi bi-shield-alert"></i> 🔍 Fraud Tracer</a>
+                <a class="btn btn-sm btn-danger fw-bold" href="/knowledge-graph"><i class="bi bi-diagram-3"></i> 🕸️ Knowledge Graph</a>
+                <a class="btn btn-sm btn-success fw-bold" href="/vendor-360"><i class="bi bi-person-bounding-box"></i> 🏢 Vendor 360</a>
+                <a class="btn btn-sm btn-primary fw-bold" href="/xai-dashboard"><i class="bi bi-cpu"></i> 🔬 Explainable AI</a>
+                <a class="btn btn-sm btn-warning text-dark fw-bold" href="/geographic-analytics"><i class="bi bi-globe"></i> 🗺️ GIS Map</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/dashboard"><i class="bi bi-arrow-left"></i> Return to Registry</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Dashboard Intro -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="accent-text-glow fw-bold mb-1">Executive Dashboard</h1>
+                <p class="text-secondary mb-0">Unified governance overview across trust index, risks, and compliance levels.</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-info" onclick="loadExecutiveAnalytics()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards Row -->
+        <div class="row g-3 mb-4">
+            <!-- 1. Total Vendors -->
+            <div class="col-xl-3 col-md-6 col-12">
+                <div class="glass-card kpi-card info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small fw-bold">TOTAL VENDORS</span>
+                        <i class="bi bi-people kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value text-white" id="val-total-vendors">--</div>
+                    <div class="mt-2 text-secondary small">
+                        <span class="trend-up fw-bold"><i class="bi bi-graph-up-arrow"></i> <span id="val-growth-rate">--</span>%</span> MoM Growth
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Healthy Vendors -->
+            <div class="col-xl-3 col-md-6 col-12">
+                <div class="glass-card kpi-card healthy">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small fw-bold">HEALTHY PROFILES</span>
+                        <i class="bi bi-check-circle kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value text-success-light" id="val-healthy-vendors">--</div>
+                    <div class="mt-2 text-secondary small">
+                        Excellent / Good Health Status
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Critical Vendors -->
+            <div class="col-xl-3 col-md-6 col-12">
+                <div class="glass-card kpi-card critical">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small fw-bold">CRITICAL PROFILES</span>
+                        <i class="bi bi-exclamation-triangle kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value text-danger-light" id="val-critical-vendors">--</div>
+                    <div class="mt-2 text-secondary small text-danger-light">
+                        Needs Immediate Attention
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Duplicate Profiles -->
+            <div class="col-xl-3 col-md-6 col-12">
+                <div class="glass-card kpi-card risk">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small fw-bold">DUPLICATE SCANS</span>
+                        <i class="bi bi-copy kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value text-warning-light" id="val-duplicate-vendors">--</div>
+                    <div class="mt-2 text-secondary small">
+                        Overlapping Tax Identifiers
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Row: Performance Score Cards -->
+        <div class="row g-3 mb-4">
+            <!-- 5. Average Trust Score -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="glass-card p-4 text-center">
+                    <span class="text-secondary small d-block mb-1">AVG TRUST INDEX</span>
+                    <h2 class="fw-bold accent-text-glow mb-2" id="val-avg-trust">--</h2>
+                    <div class="progress mb-2" style="height: 6px; background: rgba(255,255,255,0.05);">
+                        <div class="progress-bar bg-info" id="bar-avg-trust" style="width: 0%"></div>
+                    </div>
+                    <span class="text-secondary small">Threshold Target: 75+</span>
+                </div>
+            </div>
+
+            <!-- 6. Average Quality Score -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="glass-card p-4 text-center">
+                    <span class="text-secondary small d-block mb-1">AVG QUALITY RATING</span>
+                    <h2 class="fw-bold text-success-light mb-2"><span id="val-avg-quality">--</span> / 5.0</h2>
+                    <div class="progress mb-2" style="height: 6px; background: rgba(255,255,255,0.05);">
+                        <div class="progress-bar bg-success" id="bar-avg-quality" style="width: 0%"></div>
+                    </div>
+                    <span class="text-secondary small">Operational rating standard</span>
+                </div>
+            </div>
+
+            <!-- 7. Regulatory Compliance Rate -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="glass-card p-4 text-center">
+                    <span class="text-secondary small d-block mb-1">REGULATORY COMPLIANCE</span>
+                    <h2 class="fw-bold text-cyan mb-2" id="val-compliance-pct">--%</h2>
+                    <div class="progress mb-2" style="height: 6px; background: rgba(255,255,255,0.05);">
+                        <div class="progress-bar bg-cyan" id="bar-compliance" style="width: 0%"></div>
+                    </div>
+                    <span class="text-secondary small">Active credential ratios</span>
+                </div>
+            </div>
+
+            <!-- 8. Unresolved Fraud Threat Warnings -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="glass-card p-4 text-center">
+                    <span class="text-secondary small d-block mb-1">ACTIVE FRAUD ALERTS</span>
+                    <h2 class="fw-bold text-danger-light mb-2" id="val-fraud-alerts">--</h2>
+                    <div class="progress mb-2" style="height: 6px; background: rgba(255,255,255,0.05);">
+                        <div class="progress-bar bg-danger" id="bar-fraud" style="width: 0%"></div>
+                    </div>
+                    <span class="text-secondary small text-danger-light pulse-light"><i class="bi bi-circle-fill"></i> Review scanning logs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Row -->
+        <div class="row g-4 mb-4">
+            <!-- Historical Averages Graph -->
+            <div class="col-lg-8 col-12">
+                <div class="glass-card p-4">
+                    <h5 class="text-white mb-3"><i class="bi bi-graph-up"></i> Historical Analytics Trajectory</h5>
+                    <div id="historical-trends-chart"></div>
+                </div>
+            </div>
+
+            <!-- Health Radar/Distribution Graph -->
+            <div class="col-lg-4 col-12">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="text-white mb-3"><i class="bi bi-pie-chart"></i> Registry Health Spectrum</h5>
+                    <div id="health-spectrum-chart" style="min-height: 250px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top and Bottom Lists -->
+        <div class="row g-4">
+            <!-- Top 5 Performers -->
+            <div class="col-lg-6 col-12">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="text-white mb-3"><i class="bi bi-trophy text-warning"></i> Elite Performers (Top 5)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle text-center">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Business Name</th>
+                                    <th>Trust score</th>
+                                    <th>Category</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-vendors-rows">
+                                <tr><td colspan="4" class="text-secondary py-3">Loading elite vendors...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom 5 Performers -->
+            <div class="col-lg-6 col-12">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="text-white mb-3"><i class="bi bi-arrow-down-circle text-danger"></i> High-Risk Warnings (Bottom 5)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle text-center">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Business Name</th>
+                                    <th>Trust score</th>
+                                    <th>Category</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bottom-vendors-rows">
+                                <tr><td colspan="4" class="text-secondary py-3">Loading warning indicators...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripting and ApexCharts logic -->
+    <script>
+        const token = localStorage.getItem('dashboard_token') || localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/dashboard';
+        } else {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const claims = JSON.parse(jsonPayload);
+                if (claims && claims.role) {
+                    document.getElementById('user-role-badge').innerText = claims.role + " View";
+                }
+            } catch (e) {
+                console.error("Error decoding role:", e);
+            }
+        }
+
+        let trendsChart = null;
+        let healthChart = null;
+
+        async function loadExecutiveAnalytics() {
+            try {
+                const response = await fetch('/api/v2/analytics/executive', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert("Authentication expired or error fetching parameters.");
+                    return;
+                }
+
+                // Populate KPIs
+                document.getElementById('val-total-vendors').innerText = data.kpis.total_vendors;
+                document.getElementById('val-growth-rate').innerText = data.kpis.growth_rate;
+                document.getElementById('val-healthy-vendors').innerText = data.kpis.healthy_vendors;
+                document.getElementById('val-critical-vendors').innerText = data.kpis.critical_vendors;
+                document.getElementById('val-duplicate-vendors').innerText = data.kpis.duplicate_vendors;
+                
+                document.getElementById('val-avg-trust').innerText = data.kpis.average_trust_score;
+                document.getElementById('bar-avg-trust').style.width = data.kpis.average_trust_score + '%';
+                
+                document.getElementById('val-avg-quality').innerText = data.kpis.average_quality_score;
+                document.getElementById('bar-avg-quality').style.width = (data.kpis.average_quality_score * 20) + '%';
+                
+                document.getElementById('val-compliance-pct').innerText = data.kpis.compliance_percentage + '%';
+                document.getElementById('bar-compliance').style.width = data.kpis.compliance_percentage + '%';
+                
+                document.getElementById('val-fraud-alerts').innerText = data.kpis.fraud_alerts;
+                document.getElementById('bar-fraud').style.width = Math.min(100, data.kpis.fraud_alerts * 10) + '%';
+
+                // Populate Top Vendors
+                const topBody = document.getElementById('top-vendors-rows');
+                topBody.innerHTML = "";
+                data.top_vendors.forEach(v => {
+                    topBody.innerHTML += `
+                        <tr>
+                            <td><code>#${v.id}</code></td>
+                            <td class="text-start"><strong>${v.name}</strong></td>
+                            <td><span class="badge bg-success">${v.trust_score}</span></td>
+                            <td>${v.category}</td>
+                        </tr>
+                    `;
+                });
+
+                // Populate Bottom Vendors
+                const bottomBody = document.getElementById('bottom-vendors-rows');
+                bottomBody.innerHTML = "";
+                data.bottom_vendors.forEach(v => {
+                    bottomBody.innerHTML += `
+                        <tr>
+                            <td><code>#${v.id}</code></td>
+                            <td class="text-start"><strong>${v.name}</strong></td>
+                            <td><span class="badge bg-danger">${v.trust_score}</span></td>
+                            <td>${v.category}</td>
+                        </tr>
+                    `;
+                });
+
+                // Render Historical Line Chart
+                const trendOptions = {
+                    series: [
+                        { name: 'Trust Index', data: data.trends.trust },
+                        { name: 'Compliance Index', data: data.trends.compliance },
+                        { name: 'Quality Rating (Scaled)', data: data.trends.quality.map(q => q * 20) }
+                    ],
+                    chart: {
+                        type: 'area',
+                        height: 320,
+                        toolbar: { show: false },
+                        animations: { enabled: true, easing: 'easeinout', speed: 800 }
+                    },
+                    colors: ['#00f2fe', '#00e396', '#8e2de2'],
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 1,
+                            opacityFrom: 0.4,
+                            opacityTo: 0.05,
+                            stops: [0, 90, 100]
+                        }
+                    },
+                    dataLabels: { enabled: false },
+                    stroke: { curve: 'smooth', width: 3 },
+                    xaxis: {
+                        categories: data.trends.labels,
+                        labels: { style: { colors: '#8c9cb5' } }
+                    },
+                    yaxis: {
+                        min: 0,
+                        max: 100,
+                        labels: { style: { colors: '#8c9cb5' } }
+                    },
+                    grid: { borderColor: 'rgba(255,255,255,0.05)' },
+                    theme: { mode: 'dark' }
+                };
+
+                if (trendsChart) trendsChart.destroy();
+                trendsChart = new ApexCharts(document.querySelector("#historical-trends-chart"), trendOptions);
+                trendsChart.render();
+
+                // Render Health Distribution Pie/Radial Chart
+                const healthOptions = {
+                    series: [
+                        data.kpis.healthy_vendors,
+                        data.kpis.total_vendors - data.kpis.healthy_vendors - data.kpis.critical_vendors,
+                        data.kpis.critical_vendors
+                    ],
+                    chart: {
+                        type: 'donut',
+                        height: 280,
+                        foreColor: '#8c9cb5'
+                    },
+                    labels: ['Healthy', 'Average', 'Critical'],
+                    colors: ['#00e396', '#ffb01a', '#ff4560'],
+                    legend: { position: 'bottom' },
+                    stroke: { show: false },
+                    theme: { mode: 'dark' }
+                };
+
+                if (healthChart) healthChart.destroy();
+                healthChart = new ApexCharts(document.querySelector("#health-spectrum-chart"), healthOptions);
+                healthChart.render();
+
+            } catch (err) {
+                console.error("Error loading executive dashboard:", err);
+            }
+        }
+
+        // Auto load on init
+        window.addEventListener('DOMContentLoaded', loadExecutiveAnalytics);
+    // Setup Real-Time WebSocket Event Listener
+    function connectEventSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = `${wsProtocol}//${window.location.hostname}:5001`;
+        const socket = new WebSocket(socketUrl);
+
+        socket.onopen = () => {
+            console.log("WebSocket connected to real-time events server gateway.");
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                showLiveToast(data.event_type, data.payload);
+                
+                // Refresh data dynamically
+                if (typeof loadExecutiveAnalytics === 'function') {
+                    loadExecutiveAnalytics();
+                }
+            } catch (err) {
+                console.error("Error parsing WebSocket event:", err);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
+            setTimeout(connectEventSocket, 5000);
+        };
+    }
+
+    function showLiveToast(type, payload) {
+        const container = document.getElementById('live-toast-container');
+        if (!container) return;
+
+        // Determine icon and color based on event type
+        let icon = 'bi-info-circle';
+        let color = 'text-info';
+        let border = 'rgba(0, 184, 255, 0.4)';
+        let title = type;
+        let body = '';
+
+        if (type === 'Document Upload') {
+            icon = 'bi-file-earmark-arrow-up';
+            color = 'text-info';
+            border = 'rgba(0, 184, 255, 0.4)';
+            body = `New document <strong>${payload.document_name}</strong> (${payload.document_type}) uploaded for Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Fraud Alert') {
+            icon = 'bi-shield-exclamation';
+            color = 'text-danger';
+            border = 'rgba(255, 69, 96, 0.4)';
+            body = `<strong>Fraud Warning Flagged:</strong> ${payload.root_cause} (Risk level: ${payload.risk_level}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Risk Alert') {
+            icon = 'bi-exclamation-triangle';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>Critical Risk Alert:</strong> Trust score has fallen on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Trust Score Change') {
+            icon = 'bi-graph-up';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Trust score recalculated to <strong>${payload.trust_score}</strong>.`;
+        } else if (type === 'Quality Score Change') {
+            icon = 'bi-award';
+            color = 'text-success';
+            border = 'rgba(0, 227, 150, 0.4)';
+            body = `Vendor ID #${payload.vendor_id} Quality score recalculated to <strong>${payload.quality_rating}</strong>.`;
+        } else if (type === 'Compliance Change') {
+            icon = 'bi-card-checklist';
+            color = 'text-cyan';
+            border = 'rgba(0, 242, 254, 0.4)';
+            body = `Compliance score updated to <strong>${payload.compliance_score}%</strong> (Status: ${payload.approval_status}) on Vendor ID #${payload.vendor_id}.`;
+        } else if (type === 'Vendor Update') {
+            icon = 'bi-person-gear';
+            color = 'text-white';
+            border = 'rgba(255, 255, 255, 0.2)';
+            body = `Vendor profile <strong>${payload.name}</strong> status updated to <strong>${payload.status}</strong>.`;
+        } else if (type === 'Live Notification') {
+            icon = 'bi-bell-fill';
+            color = 'text-warning';
+            border = 'rgba(255, 176, 26, 0.4)';
+            body = `<strong>${payload.title}</strong>: ${payload.message}`;
+        }
+
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const toastHtml = `
+            <div id="${toastId}" class="toast show glass-card border mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="background: rgba(22, 33, 54, 0.85); border-color: ${border}; min-width: 320px;">
+                <div class="toast-header border-bottom border-secondary border-opacity-10 text-white" style="background: transparent;">
+                    <i class="bi ${icon} ${color} me-2" style="font-size: 1.1rem;"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-secondary">Just now</small>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close" onclick="document.getElementById('${toastId}').remove()"></button>
+                </div>
+                <div class="toast-body text-white" style="font-size: 0.85rem;">
+                    ${body}
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Auto remove toast after 6 seconds
+        setTimeout(() => {
+            const toastEl = document.getElementById(toastId);
+            if (toastEl) {
+                toastEl.classList.remove('show');
+                setTimeout(() => toastEl.remove(), 300);
+            }
+        }, 6000);
+    }
+
+    // Initialize socket connection
+    window.addEventListener('DOMContentLoaded', connectEventSocket);
+</script>
+
+<div id="live-toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
+
+</body>
+</html>
