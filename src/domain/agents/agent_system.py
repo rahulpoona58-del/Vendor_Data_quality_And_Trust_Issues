@@ -118,7 +118,7 @@ class RiskAgent(BaseAgent):
 
         return {
             'active_anomalies_count': len(anomalies),
-            'anomaly_patterns': [a.pattern_name for a in anomalies],
+            'anomaly_patterns': [getattr(a, 'pattern_name', getattr(a, 'pattern', 'Unknown Pattern')) for a in anomalies],
             'max_anomaly_score': max([a.anomaly_score for a in anomalies]) if anomalies else 0.0
         }
 

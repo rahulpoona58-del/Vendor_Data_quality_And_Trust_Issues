@@ -21,7 +21,10 @@ class TestFraudEngineUnit(unittest.TestCase):
         self.assertIn('not found', result['message'].lower())
 
     def test_execute_scan_clean_vendor(self):
-        result = FraudEngine.execute_scan(vendor_id=1)
+        from src.infrastructure.database.models import Vendor
+        v = Vendor.query.first()
+        v_id = v.id if v else 1
+        result = FraudEngine.execute_scan(vendor_id=v_id)
         self.assertTrue(result['success'])
         self.assertIn('fraud_check', result)
 

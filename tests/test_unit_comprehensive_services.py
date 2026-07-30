@@ -37,7 +37,10 @@ class TestComprehensiveServicesUnit(unittest.TestCase):
 
     # 3. REPUTATION ENGINE UNIT TESTS
     def test_reputation_engine_calculate(self):
-        result = ReputationIntelligenceEngine.calculate_reputation(vendor_id=1)
+        from src.infrastructure.database.models import Vendor
+        v = Vendor.query.first()
+        v_id = v.id if v else 1
+        result = ReputationIntelligenceEngine.calculate_reputation(vendor_id=v_id)
         self.assertTrue(result['success'])
         self.assertIn('reputation', result)
         self.assertIn('reputation_score', result['reputation'])

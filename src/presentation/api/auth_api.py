@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from src.infrastructure.database.models import User, db
 from src.infrastructure.security.cryptography import hash_password, verify_password, generate_tokens, decode_token, revoke_token
 from src.infrastructure.validation.validators import validate_request
+from src.infrastructure.security.decorators import login_required
 from src.config import get_config
 import logging
 
@@ -91,6 +92,26 @@ def login():
         'expires_in': tokens['expires_in'],
         'user': user.to_dict()
     })
+
+@auth_api.route('/api/v2/auth/me', methods=['GET'])
+@login_required
+def get_current_user_profile():
+    """Returns current authenticated user profile."""
+    try:
+        user_id = session.get('user_id') or getattr(request, 'user_id', None)
+        if not user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header.split(" ")[1]
+                config = get_config()
+                decoded = decode_token(token, config.SECRET_KEY)
+                user_id = decoded.get('user_id')
+        user = User.query.get(user_id) if user_id else None
+        if not user:
+            return jsonify({'success': False, 'message': 'User profile not found'}), 404
+        return jsonify({'success': True, 'user': user.to_dict()}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @auth_api.route('/api/v2/auth/refresh', methods=['POST'])
 def refresh():

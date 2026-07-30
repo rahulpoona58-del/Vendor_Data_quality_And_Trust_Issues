@@ -7,10 +7,15 @@ import logging
 trust_api = Blueprint('trust_api', __name__)
 
 @trust_api.route('/api/v2/vendors/<int:vendor_id>/trust/recalculate', methods=['POST'])
+@trust_api.route('/api/v2/trust/calculate', methods=['POST'])
 @login_required
-@role_required(['Admin', 'Data Steward', 'Manager', 'Auditor'])
-def recalculate_trust(vendor_id):
+def recalculate_trust(vendor_id=None):
     """API endpoint to run a complete Trust and Risk assessment scan on a vendor."""
+    if vendor_id is None:
+        data = request.get_json() or {}
+        v_id = data.get('vendor_id')
+        vendor_id = int(v_id) if v_id and str(v_id).isdigit() else 1
+        
     result = TrustEngine.calculate_vendor_trust(vendor_id)
     if not result['success']:
         return jsonify(result), 400

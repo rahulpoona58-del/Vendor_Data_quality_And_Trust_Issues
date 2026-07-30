@@ -7,6 +7,14 @@ import logging
 
 analytics_api = Blueprint('analytics_api', __name__)
 
+@analytics_api.route('/api/v2/enterprise/telemetry', methods=['GET'])
+@login_required
+def get_enterprise_telemetry():
+    """Unified Enterprise Data API supplying real-time analytics across all 13 enterprise dashboards."""
+    from src.domain.services.enterprise_data_service import EnterpriseDataService
+    res = EnterpriseDataService.get_unified_enterprise_telemetry()
+    return jsonify(res), 200 if res.get('success') else 500
+
 @analytics_api.route('/api/v2/analytics/telemetry', methods=['GET'])
 @login_required
 @cache_response(ttl_seconds=30)

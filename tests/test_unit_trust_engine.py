@@ -21,7 +21,10 @@ class TestTrustEngineUnit(unittest.TestCase):
         self.assertIn('not found', result['message'].lower())
 
     def test_calculate_vendor_trust_success(self):
-        result = TrustEngine.calculate_vendor_trust(vendor_id=1)
+        from src.infrastructure.database.models import Vendor
+        v = Vendor.query.first()
+        v_id = v.id if v else 1
+        result = TrustEngine.calculate_vendor_trust(vendor_id=v_id)
         self.assertTrue(result['success'])
         self.assertIn('trust_result', result)
         score = result['trust_result']['trust_score']

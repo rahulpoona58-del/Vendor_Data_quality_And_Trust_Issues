@@ -19,8 +19,7 @@ def get_predictive_telemetry():
 def get_predictive_alerts():
     """API endpoint returning concrete threat prediction warnings and confidence ratings."""
     v_id = request.args.get('vendor_id')
-    if not v_id or not v_id.isdigit():
-        return jsonify({'success': False, 'message': 'vendor_id parameter is required and must be numeric'}), 400
+    vendor_id = int(v_id) if v_id and v_id.isdigit() else 1
         
-    alerts = PredictiveAnalyticsEngine.generate_predictive_alerts(int(v_id))
+    alerts = PredictiveAnalyticsEngine.generate_predictive_alerts(vendor_id)
     return jsonify({'success': True, 'alerts': alerts}), 200

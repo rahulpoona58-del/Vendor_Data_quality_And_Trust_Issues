@@ -95,8 +95,8 @@ class ReportService:
         data = []
         title = report_type
         
-        if report_type == 'Vendor Summary':
-            title = "Vendor Telemetry Summary"
+        if report_type in ['Vendor Summary', 'Executive Summary']:
+            title = "Vendor Telemetry Executive Summary"
             for v in vendors:
                 comp = comp_map.get(v.id)
                 fraud = fraud_map.get(v.id)

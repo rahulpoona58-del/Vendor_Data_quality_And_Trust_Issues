@@ -21,7 +21,10 @@ class TestComplianceEngineUnit(unittest.TestCase):
         self.assertIn('not found', result['message'].lower())
 
     def test_evaluate_compliance_success(self):
-        result = ComplianceEngine.evaluate_compliance(vendor_id=1)
+        from src.infrastructure.database.models import Vendor
+        v = Vendor.query.first()
+        v_id = v.id if v else 1
+        result = ComplianceEngine.evaluate_compliance(vendor_id=v_id)
         self.assertTrue(result['success'])
         self.assertIn('compliance_status', result)
         score = result['compliance_status']['compliance_score']
