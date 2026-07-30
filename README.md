@@ -177,3 +177,5 @@ curl -X POST http://localhost:5000/api/v2/auth/login \
 ## 📄 License
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
+#   v e n d o r - d a t a  
+ 
